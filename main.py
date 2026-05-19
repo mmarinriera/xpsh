@@ -40,7 +40,18 @@ def test_balance():
     print(f"Debt A->B: {account_A-paid_A}")
     print()
 
-    print("Hello from expense-share!")
+    # user A settles the balance
+    payment_2 = 5.0
+    part_2 = 0.0
+
+    account_A,paid_A = update_user_balance(payment=payment_2,own_part=part_2,account=account_A,paid=paid_A,is_payer=True)
+    account_B,paid_B = update_user_balance(payment=payment_2,own_part=1-part_2,account=account_B,paid=paid_B)
+
+
+    print(f"Payment: account A = {account_A}; account B = {account_B}")
+    print(f"       : paid A = {paid_A}; paid B = {paid_B}")
+    print(f"Debt A->B: {account_A-paid_A}")
+    print()
 
 
 if __name__ == "__main__":
