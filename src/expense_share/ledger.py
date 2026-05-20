@@ -94,10 +94,10 @@ class Ledger:
     def __repr__(self) -> str:
         out = "Member\tTotal Expenses\tTotal Paid\tOwed"
         for name, account in self.accounts.items():
-            out += f"\n{name}\t{account.spent}\t\t{account.paid}\t\t{account.owed}"
-        out += "\nTransfers to settle:"
+            out += f"\n* {name}\t{account.spent}\t\t{account.paid}\t\t{account.owed}"
+        out += "\n\nTransfers to settle:"
         for transfer in self.settle_transfers:
-            out += f"\n{transfer}"
+            out += f"\n* {transfer}"
         return out
 
     def save_ledger_to_file(self, file_path: Path) -> None:
