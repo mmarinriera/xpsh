@@ -1,6 +1,8 @@
 import logging
 from dataclasses import dataclass
 from dataclasses import field
+from pathlib import Path
+from typing import Self
 
 logger = logging.getLogger(__name__)
 
@@ -46,9 +48,24 @@ class Transfer:
         return f"Transfer '{self.payer}' -> '{self.recipient}': {self.quantity}."
 
 
+def _load_ledger_from_file(file_path: Path) -> tuple[list[str], list[Expense]]:
+    with open(file_path) as f:
+        header = next(f)
+        members = header.strip().split(",")
+        expenses = []
+        for line in f:
+            raw = line.strip().split(",")
+            payer = raw.pop(0)
+            quantity = float(raw.pop(0))
+            distribution = {val.split(":")[0]: float(val.split(":")[1]) for val in raw}
+            expenses.append(Expense(payer=payer, quantity=quantity, distribution=distribution))
+    return members, expenses
+
+
 @dataclass
 class Ledger:
     members: list[str]
+    expenses: list[Expense] = field(default_factory=list)
     accounts: dict[str, Account] = field(init=False)
 
     @property
@@ -66,6 +83,14 @@ class Ledger:
         for name in self.members:
             self.accounts[name] = Account(name=name)
 
+    @classmethod
+    def from_file(cls, file_path: Path) -> Self:
+        members, expenses = _load_ledger_from_file(file_path)
+        ledger = cls(members=members)
+        for x in expenses:
+            ledger.add_expense(x)
+        return ledger
+
     def __repr__(self) -> str:
         out = "Member\tTotal Expenses\tTotal Paid\tOwed"
         for name, account in self.accounts.items():
@@ -75,11 +100,20 @@ class Ledger:
             out += f"\n{transfer}"
         return out
 
+    def save_ledger_to_file(self, file_path: Path) -> None:
+        with open(file_path, "w") as f:
+            f.write(",".join(self.members) + "\n")
+            for exp in self.expenses:
+                distribution_str = [f"{n}:{d}" for n, d in exp.distribution.items()]
+                f.write(",".join([exp.payer, str(exp.quantity)] + distribution_str))
+
     def add_expense(self, expense: Expense) -> None:
         if expense.payer not in self.members:
             raise ValueError(f"Expense payer not in members. {expense.payer}")
         if any([m not in self.members for m in expense.distribution]):
             raise ValueError(f"Some recipient not in members.{list(expense.distribution.keys())}")
+
+        self.expenses.append(expense)
 
         payer_account = self.accounts[expense.payer]
         payer_account.paid += expense.quantity
