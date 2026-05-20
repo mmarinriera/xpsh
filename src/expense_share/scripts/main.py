@@ -79,7 +79,7 @@ def add_expense(
         assignment = [(n, 1) for n in ledger.members]
 
     assignment_dict = {v[0]: v[1] for v in assignment}
-    expense = Expense(payer=payer, quantity=quantity, distribution=assignment_dict)
+    expense = Expense(payer=payer, quantity=quantity, assignment=assignment_dict)
     ledger.add_expense(expense)
 
     if print_output:

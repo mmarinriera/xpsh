@@ -22,16 +22,16 @@ class Account:
 class Expense:
     payer: str
     quantity: float
-    distribution: dict[str, float]
+    assignment: dict[str, float]
 
     def __post_init__(self) -> None:
-        if sum(list(self.distribution.values())) == 1.0:
+        if sum(list(self.assignment.values())) == 1.0:
             return
 
-        logger.info("Distribution weights doesn't add up to 1, normalising.")
-        total = sum(list(self.distribution.values()))
-        for name, value in self.distribution.items():
-            self.distribution[name] = value / total
+        logger.info("Assignment weights doesn't add up to 1, normalising.")
+        total = sum(list(self.assignment.values()))
+        for name, value in self.assignment.items():
+            self.assignment[name] = value / total
 
 
 @dataclass
@@ -57,8 +57,8 @@ def _load_ledger_from_file(file_path: Path) -> tuple[list[str], list[Expense]]:
             raw = line.strip().split(",")
             payer = raw.pop(0)
             quantity = float(raw.pop(0))
-            distribution = {val.split(":")[0]: float(val.split(":")[1]) for val in raw}
-            expenses.append(Expense(payer=payer, quantity=quantity, distribution=distribution))
+            assignment = {val.split(":")[0]: float(val.split(":")[1]) for val in raw}
+            expenses.append(Expense(payer=payer, quantity=quantity, assignment=assignment))
     return members, expenses
 
 
@@ -104,21 +104,21 @@ class Ledger:
         with open(file_path, "w") as f:
             f.write(",".join(self.members) + "\n")
             for exp in self.expenses:
-                distribution_str = [f"{n}:{d}" for n, d in exp.distribution.items()]
-                f.write(",".join([exp.payer, str(exp.quantity)] + distribution_str) + "\n")
+                assignment_str = [f"{n}:{d}" for n, d in exp.assignment.items()]
+                f.write(",".join([exp.payer, str(exp.quantity)] + assignment_str) + "\n")
 
     def add_expense(self, expense: Expense) -> None:
         if expense.payer not in self.members:
             raise ValueError(f"Expense payer not in members. {expense.payer}")
-        if any([m not in self.members for m in expense.distribution]):
-            raise ValueError(f"Some recipient not in members.{list(expense.distribution.keys())}")
+        if any([m not in self.members for m in expense.assignment]):
+            raise ValueError(f"Some recipient not in members.{list(expense.assignment.keys())}")
 
         self.expenses.append(expense)
 
         payer_account = self.accounts[expense.payer]
         payer_account.paid += expense.quantity
 
-        for name, fraction in expense.distribution.items():
+        for name, fraction in expense.assignment.items():
             account = self.accounts[name]
             account.spent += expense.quantity * fraction
 
