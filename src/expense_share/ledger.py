@@ -1,7 +1,9 @@
-from dataclasses import dataclass,field
 import logging
+from dataclasses import dataclass
+from dataclasses import field
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class Account:
@@ -10,7 +12,7 @@ class Account:
     paid: float = 0.0
 
     @property
-    def owed(self)->float:
+    def owed(self) -> float:
         return self.spent - self.paid
 
 
@@ -18,16 +20,17 @@ class Account:
 class Expense:
     payer: str
     quantity: float
-    distribution: dict[str,float]
+    distribution: dict[str, float]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if sum(list(self.distribution.values())) == 1.0:
             return
-        
-        print("Distribution weights doesn't add up to 1, normalising.")
+
+        logger.info("Distribution weights doesn't add up to 1, normalising.")
         total = sum(list(self.distribution.values()))
         for name, value in self.distribution.items():
-            self.distribution[name] = value/total
+            self.distribution[name] = value / total
+
 
 @dataclass
 class Transfer:
@@ -35,44 +38,44 @@ class Transfer:
     quantity: float
     recipient: str
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.payer == self.recipient:
             raise ValueError("Payer and recipient must be different.")
-        
-    def __repr__(self)->str:
+
+    def __repr__(self) -> str:
         return f"Transfer '{self.payer}' -> '{self.recipient}': {self.quantity}."
+
 
 @dataclass
 class Ledger:
     members: list[str]
-    accounts: dict[str,Account]= field(init=False)
-    
+    accounts: dict[str, Account] = field(init=False)
+
     @property
-    def settle_transfers(self)->list[Transfer]:
+    def settle_transfers(self) -> list[Transfer]:
         return self.calculate_balance()
 
-    def __post_init__(self):
-        if len(self.members) <=1:
+    def __post_init__(self) -> None:
+        if len(self.members) <= 1:
             raise ValueError("Include at least two members.")
 
         if len(set(self.members)) < len(self.members):
             raise ValueError("Duplicate member names.")
-        
-        self.accounts={}
+
+        self.accounts = {}
         for name in self.members:
             self.accounts[name] = Account(name=name)
 
-    def __repr__(self)->str:
+    def __repr__(self) -> str:
         out = "Member\tTotal Expenses\tTotal Paid\tOwed"
-        for name,account in self.accounts.items():
-            out+=f"\n{name}\t{account.spent}\t\t{account.paid}\t\t{account.owed}"
-        out+="\nTransfers to settle:"
+        for name, account in self.accounts.items():
+            out += f"\n{name}\t{account.spent}\t\t{account.paid}\t\t{account.owed}"
+        out += "\nTransfers to settle:"
         for transfer in self.settle_transfers:
-            out+=f"\n{transfer}"
+            out += f"\n{transfer}"
         return out
-        
 
-    def add_expense(self, expense:Expense)->None:
+    def add_expense(self, expense: Expense) -> None:
         if expense.payer not in self.members:
             raise ValueError(f"Expense payer not in members. {expense.payer}")
         if any([m not in self.members for m in expense.distribution]):
@@ -85,16 +88,17 @@ class Ledger:
             account = self.accounts[name]
             account.spent += expense.quantity * fraction
 
-    def calculate_balance(self)->list[Transfer]:
-        """Calculate who owes money to who.
-        
+    def calculate_balance(self) -> list[Transfer]:
+        """
+        Calculate who owes money to who.
+
         Sorting the accounts by total amount owed, then assigning transfers between accounts prioritising largest transfers.
         """
-        sorted_accounts:list[Account] = sorted(self.accounts.values(),key=lambda a: a.owed,reverse=True)
-        logger.debug(f"{dict({a.name:a.owed for a in sorted_accounts})}")
-        
+        sorted_accounts: list[Account] = sorted(self.accounts.values(), key=lambda a: a.owed, reverse=True)
+        logger.debug(f"{dict({a.name: a.owed for a in sorted_accounts})}")
+
         pointer_indebted = 0
-        pointer_receiver = len(sorted_accounts)-1
+        pointer_receiver = len(sorted_accounts) - 1
 
         indebted_account = sorted_accounts[pointer_indebted]
         receiver_account = sorted_accounts[pointer_receiver]
@@ -107,15 +111,17 @@ class Ledger:
 
         while pointer_indebted < pointer_receiver:
             # Check if we have moved through all the over indebted accounts
-            if indebted_account.owed <=0.0:
+            if indebted_account.owed <= 0.0:
                 break
 
             if remaining_owed <= remaining_to_settle:
-                transfer = Transfer(payer=indebted_account.name,quantity=remaining_owed,recipient=receiver_account.name)
+                transfer = Transfer(
+                    payer=indebted_account.name, quantity=remaining_owed, recipient=receiver_account.name
+                )
                 settle_transfers.append(transfer)
-                
-                remaining_to_settle-=remaining_owed
-                pointer_indebted +=1
+
+                remaining_to_settle -= remaining_owed
+                pointer_indebted += 1
 
                 indebted_account = sorted_accounts[pointer_indebted]
                 remaining_owed = indebted_account.owed
@@ -125,17 +131,18 @@ class Ledger:
 
             else:
                 transfer_quantity = remaining_to_settle
-                transfer = Transfer(payer=indebted_account.name,quantity=transfer_quantity,recipient=receiver_account.name)
+                transfer = Transfer(
+                    payer=indebted_account.name, quantity=transfer_quantity, recipient=receiver_account.name
+                )
                 settle_transfers.append(transfer)
-                
+
                 remaining_owed -= transfer_quantity
-                pointer_receiver-=1
-                
+                pointer_receiver -= 1
+
                 receiver_account = sorted_accounts[pointer_receiver]
                 remaining_to_settle = abs(receiver_account.owed)
 
                 logger.debug(f"b transfer {transfer}")
                 logger.debug(f"b rem owed: {remaining_owed} / rem settle {remaining_to_settle}")
-
 
         return settle_transfers
