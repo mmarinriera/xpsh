@@ -1,0 +1,50 @@
+exclude: ^(resources|tests/resources)/
+
+repos:
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.12
+    hooks:
+      - id: ruff
+        name: Run ruff to auto-fix lint errors
+        types_or: [ python, pyi ]
+      - id: ruff-format
+        name: Run ruff to format code
+        types_or: [ python, pyi ]
+
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+    -   id: check-yaml
+    -   id: end-of-file-fixer
+    -   id: check-added-large-files
+    -   id: debug-statements
+        language_version: python3
+
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.20.2
+    hooks:
+    -   id: mypy
+        files: ^src/expense_share/|^tests
+
+-   repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.15.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+-   repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.11.9
+    hooks:
+    -   id: uv-lock
+        name: Update uv lock file
+
+- repo: https://github.com/jsh9/pydoclint
+  rev: 0.8.3
+  hooks:
+    - id: pydoclint
+      files: ^src/expense_share/
+
+- repo: https://github.com/tox-dev/pyproject-fmt
+  rev: v2.21.2
+  hooks:
+    - id: pyproject-fmt
