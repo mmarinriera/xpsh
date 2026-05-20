@@ -1,57 +1,34 @@
-   
-
-
-def update_user_balance(payment,own_part,account,paid,is_payer=False):
-    account += payment*own_part
-    paid += payment * is_payer
-    return account, paid
+from expense_share.ledger import Ledger,Expense
+import logging
+logger = logging.getLogger(__name__)
 
 def test_balance():
-    account_A = 0.0
-    account_B = 0.0
-    paid_A = 0.0
-    paid_B = 0.0
+    logging.basicConfig(level=logging.DEBUG)
+    logger.info("START")
 
+    A = "A"
+    B = "B"
+    C = "C"
+    D = "D"
+    ledger = Ledger(members=[A,B,C,D])
+    expense_0 = Expense(A, 16.0,distribution={A:1,B:1,C:1,D:1})
+    ledger.add_expense(expense_0)
 
-    # user A pays
-    payment_0 = 10.0
-    part_0 = 0.5
+    print("**** Expense 0 ****")
+    print(ledger)
 
-    account_A,paid_A = update_user_balance(payment=payment_0,own_part=part_0,account=account_A,paid=paid_A,is_payer=True)
-    account_B,paid_B = update_user_balance(payment=payment_0,own_part=1-part_0,account=account_B,paid=paid_B)
+    expense_1 = Expense(B, 42.0,distribution={A:1,B:1,C:1,D:1})
+    ledger.add_expense(expense_1)
 
-    print(f"Payment: account A = {account_A}; account B = {account_B}")
-    print(f"       : paid A = {paid_A}; paid B = {paid_B}")
-    print(f"Debt A->B: {account_A-paid_A}")
-    print()
+    print("**** Expense 1 ****")
+    print(ledger)
 
+    expense_2 = Expense(C, 8.0,distribution={A:0,B:0,C:1,D:1})
+    ledger.add_expense(expense_2)
 
+    print("**** Expense 2 ****")
+    print(ledger)
 
-    # user B pays
-    payment_1 = 20.0
-    part_1 = 0.5
-
-    account_A,paid_A = update_user_balance(payment=payment_1,own_part=1-part_1,account=account_A,paid=paid_A)
-    account_B,paid_B = update_user_balance(payment=payment_1,own_part=part_1,account=account_B,paid=paid_B,is_payer=True)
-
-
-    print(f"Payment: account A = {account_A}; account B = {account_B}")
-    print(f"       : paid A = {paid_A}; paid B = {paid_B}")
-    print(f"Debt A->B: {account_A-paid_A}")
-    print()
-
-    # user A settles the balance
-    payment_2 = 5.0
-    part_2 = 0.0
-
-    account_A,paid_A = update_user_balance(payment=payment_2,own_part=part_2,account=account_A,paid=paid_A,is_payer=True)
-    account_B,paid_B = update_user_balance(payment=payment_2,own_part=1-part_2,account=account_B,paid=paid_B)
-
-
-    print(f"Payment: account A = {account_A}; account B = {account_B}")
-    print(f"       : paid A = {paid_A}; paid B = {paid_B}")
-    print(f"Debt A->B: {account_A-paid_A}")
-    print()
 
 
 if __name__ == "__main__":
