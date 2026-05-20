@@ -105,7 +105,7 @@ class Ledger:
             f.write(",".join(self.members) + "\n")
             for exp in self.expenses:
                 distribution_str = [f"{n}:{d}" for n, d in exp.distribution.items()]
-                f.write(",".join([exp.payer, str(exp.quantity)] + distribution_str))
+                f.write(",".join([exp.payer, str(exp.quantity)] + distribution_str) + "\n")
 
     def add_expense(self, expense: Expense) -> None:
         if expense.payer not in self.members:

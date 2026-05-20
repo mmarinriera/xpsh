@@ -1,0 +1,3 @@
+Zipi,Zape
+Zipi,10.0,Zipi:0.5,Zape:0.5
+Zape,20.0,Zipi:0.5,Zape:0.5
