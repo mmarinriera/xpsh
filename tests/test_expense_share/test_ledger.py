@@ -78,3 +78,116 @@ def test_ledger_load_from_file(example_file_path: Path, subtests: pytest.Subtest
         assert ledger.accounts == TARGET_ACCOUNTS
     with subtests.test("Test ledger from file: expenses"):
         assert ledger.expenses == TARGET_EXPENSES
+
+
+def test_ledger_save_to_file(tmp_path: Path) -> None:
+    TARGET_FILE_CONTENT = """A,B
+A,10.0,A:0.5,B:0.5
+B,20.0,A:0.5,B:0.5
+"""
+    ledger = Ledger(members=["A", "B"])
+    ledger.add_expense(Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}))
+    ledger.add_expense(Expense(payer="B", quantity=20.0, assignment={"A": 1, "B": 1}))
+
+    out_path = tmp_path / "out.txt"
+    ledger.save_ledger_to_file(out_path)
+    with open(out_path) as f:
+        out_content = f.read()
+
+    assert out_content == TARGET_FILE_CONTENT
+
+
+def test_representation(subtests: pytest.Subtests) -> None:
+    TARGET_REPR_NO_BALANCED = """Member\tTotal Expenses\tTotal Paid\tOwed
+* A\t15.0\t\t10.0\t\t5.0
+* B\t15.0\t\t20.0\t\t-5.0
+
+Transfers to settle:
+* Transfer 'A' -> 'B': 5.0."""
+
+    TARGET_REPR_BALANCED = """Member\tTotal Expenses\tTotal Paid\tOwed
+* A\t20.0\t\t20.0\t\t0.0
+* B\t20.0\t\t20.0\t\t0.0
+
+Expenses are balanced."""
+
+    ledger_0 = Ledger(members=["A", "B"])
+    ledger_0.add_expense(Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}))
+    ledger_0.add_expense(Expense(payer="B", quantity=20.0, assignment={"A": 1, "B": 1}))
+    with subtests.test("Test ledger repr non-balanced."):
+        assert str(ledger_0) == TARGET_REPR_NO_BALANCED
+
+    ledger_0.add_expense(Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}))
+    with subtests.test("Test ledger repr balanced."):
+        assert str(ledger_0) == TARGET_REPR_BALANCED
+
+
+def test_add_expense(subtests: pytest.Subtests) -> None:
+    ledger = Ledger(members=["A", "B"])
+    ledger.add_expense(Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}))
+    with subtests.test("Test add one expense."):
+        assert ledger.accounts["A"].paid == 10.0
+        assert ledger.accounts["A"].spent == 5.0
+        assert ledger.accounts["A"].owed == -5.0
+        assert ledger.accounts["B"].paid == 0.0
+        assert ledger.accounts["B"].spent == 5.0
+        assert ledger.accounts["B"].owed == 5.0
+
+    ledger.add_expense(Expense(payer="B", quantity=12.0, assignment={"A": 2, "B": 1}))
+    with subtests.test("Test add another expense."):
+        assert ledger.accounts["A"].paid == 10.0
+        assert ledger.accounts["A"].spent == 13.0
+        assert ledger.accounts["A"].owed == 3.0
+        assert ledger.accounts["B"].paid == 12.0
+        assert ledger.accounts["B"].spent == 9.0
+        assert ledger.accounts["B"].owed == -3.0
+
+    ledger.add_expense(Expense(payer="B", quantity=5.0, assignment={"A": 1}))
+    with subtests.test("Test add expense with partial assignment."):
+        assert ledger.accounts["A"].paid == 10.0
+        assert ledger.accounts["A"].spent == 18.0
+        assert ledger.accounts["A"].owed == 8.0
+        assert ledger.accounts["B"].paid == 17.0
+        assert ledger.accounts["B"].spent == 9.0
+        assert ledger.accounts["B"].owed == -8.0
+
+    with subtests.test("Add expense with unknown payer."):
+        with pytest.raises(ValueError, match="Expense payer not in members. 'C'"):
+            ledger.add_expense(Expense(payer="C", quantity=5.0, assignment={"A": 1, "B": 1}))
+
+    with subtests.test("Add expense with unknown assignee."):
+        with pytest.raises(ValueError, match=r"Some recipient not in members. \['A', 'B', 'C'\]"):
+            ledger.add_expense(Expense(payer="A", quantity=5.0, assignment={"A": 1, "B": 1, "C": 1}))
+
+
+def test_calculate_balance(subtests: pytest.Subtests) -> None:
+    ledger_0 = Ledger(members=["A", "B"])
+    ledger_0.add_expense(Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}))
+    ledger_0.add_expense(Expense(payer="B", quantity=20.0, assignment={"A": 1, "B": 1}))
+    TARGET_TRANSFERS_0 = [Transfer("A", 5.0, "B")]
+
+    with subtests.test("Calculate balance with two members"):
+        assert ledger_0.calculate_balance() == TARGET_TRANSFERS_0
+
+    ledger_1 = Ledger(members=["A", "B", "C", "D"])
+    ledger_1.add_expense(Expense(payer="A", quantity=12.0, assignment={"A": 1, "C": 1, "D": 1}))
+    ledger_1.add_expense(Expense(payer="B", quantity=24.0, assignment={"A": 1, "B": 1, "D": 1}))
+    TARGET_TRANSFERS_1 = [
+        Transfer("C", 4.0, "B"),
+        Transfer("D", 12.0, "B"),
+    ]
+
+    with subtests.test("Calculate balance with 4 members and 3 transfers"):
+        assert sorted(ledger_1.calculate_balance(), key=lambda t: t.quantity) == TARGET_TRANSFERS_1
+
+    ledger_2 = Ledger(members=["A", "B", "C", "D"])
+    ledger_2.add_expense(Expense(payer="A", quantity=12.0, assignment={"A": 1, "B": 1, "C": 1, "D": 1}))
+    ledger_2.add_expense(Expense(payer="B", quantity=24.0, assignment={"A": 1, "B": 1, "D": 1}))
+    TARGET_TRANSFERS_2 = [
+        Transfer("C", 1.0, "A"),
+        Transfer("C", 2.0, "B"),
+        Transfer("D", 11.0, "B"),
+    ]
+
+    with subtests.test("Calculate balance with 4 members and 3 transfers"):
+        assert sorted(ledger_2.calculate_balance(), key=lambda t: t.quantity) == TARGET_TRANSFERS_2
