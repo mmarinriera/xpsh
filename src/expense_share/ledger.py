@@ -65,7 +65,7 @@ def _load_ledger_from_file(file_path: Path) -> tuple[list[str], list[Expense]]:
 @dataclass
 class Ledger:
     members: list[str]
-    expenses: list[Expense] = field(default_factory=list)
+    expenses: list[Expense] = field(init=False)
     accounts: dict[str, Account] = field(init=False)
 
     @property
@@ -82,6 +82,8 @@ class Ledger:
         self.accounts = {}
         for name in self.members:
             self.accounts[name] = Account(name=name)
+
+        self.expenses = []
 
     @classmethod
     def from_file(cls, file_path: Path) -> Self:
