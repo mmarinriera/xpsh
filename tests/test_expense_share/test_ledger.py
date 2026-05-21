@@ -8,16 +8,6 @@ from expense_share.ledger import Ledger
 from expense_share.ledger import Transfer
 
 
-def get_resource(file_name: str) -> Path:
-    base_dir = Path.cwd()
-    return base_dir / "tests" / "resources" / file_name
-
-
-@pytest.fixture
-def example_file_path() -> Path:
-    return get_resource("example.txt")
-
-
 def test_account() -> None:
     account = Account(name="A", spent=10.0, paid=20.0)
     assert account.owed == -10.0
