@@ -97,6 +97,11 @@ class Ledger:
         out = "Member\tTotal Expenses\tTotal Paid\tOwed"
         for name, account in self.accounts.items():
             out += f"\n* {name}\t{account.spent}\t\t{account.paid}\t\t{account.owed}"
+
+        if not self.settle_transfers:
+            out += "\n\nExpenses are balanced."
+            return out
+
         out += "\n\nTransfers to settle:"
         for transfer in self.settle_transfers:
             out += f"\n* {transfer}"
