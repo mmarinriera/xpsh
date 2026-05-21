@@ -116,9 +116,9 @@ class Ledger:
 
     def add_expense(self, expense: Expense) -> None:
         if expense.payer not in self.members:
-            raise ValueError(f"Expense payer not in members. {expense.payer}")
+            raise ValueError(f"Expense payer not in members. '{expense.payer}'")
         if any([m not in self.members for m in expense.assignment]):
-            raise ValueError(f"Some recipient not in members.{list(expense.assignment.keys())}")
+            raise ValueError(f"Some recipient not in members. {list(expense.assignment.keys())}")
 
         self.expenses.append(expense)
 
