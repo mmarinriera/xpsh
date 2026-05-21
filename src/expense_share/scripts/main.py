@@ -51,6 +51,7 @@ def xpsh(ctx: click.Context, debug_mode: bool) -> None:
 @click.argument("file_path", type=click.Path(exists=True, resolve_path=True, path_type=Path))
 def balance(file_path: Path) -> None:
     ledger = Ledger.from_file(file_path)
+    logger.info("Ledger loaded from file")
     click.echo(ledger)
 
 
@@ -75,8 +76,10 @@ def add_expense(
     file_path: Path, payer: str, quantity: float, assignment: list[tuple[str, float]], print_output: bool, no_save: bool
 ) -> None:
     ledger = Ledger.from_file(file_path)
+    logger.info("Ledger loaded from file")
     if not assignment:
         assignment = [(n, 1) for n in ledger.members]
+    logger.info("No assignment provided. Equal parts assigned.")
 
     assignment_dict = {v[0]: v[1] for v in assignment}
     expense = Expense(payer=payer, quantity=quantity, assignment=assignment_dict)
@@ -89,3 +92,4 @@ def add_expense(
         return
 
     ledger.save_ledger_to_file(file_path)
+    logger.info("Updated ledger saved to file.")
