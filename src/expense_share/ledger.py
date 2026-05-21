@@ -162,28 +162,21 @@ class Ledger:
                 settle_transfers.append(transfer)
 
                 remaining_to_settle -= remaining_owed
-                pointer_indebted += 1
 
+                pointer_indebted += 1
                 indebted_account = sorted_accounts[pointer_indebted]
                 remaining_owed = indebted_account.owed
 
-                logger.debug(f"a transfer {transfer}")
-                logger.debug(f"a rem owed: {remaining_owed} / rem settle {remaining_to_settle}")
-
             else:
-                transfer_quantity = remaining_to_settle
                 transfer = Transfer(
-                    payer=indebted_account.name, quantity=transfer_quantity, recipient=receiver_account.name
+                    payer=indebted_account.name, quantity=remaining_to_settle, recipient=receiver_account.name
                 )
                 settle_transfers.append(transfer)
 
-                remaining_owed -= transfer_quantity
-                pointer_receiver -= 1
+                remaining_owed -= remaining_to_settle
 
+                pointer_receiver -= 1
                 receiver_account = sorted_accounts[pointer_receiver]
                 remaining_to_settle = abs(receiver_account.owed)
-
-                logger.debug(f"b transfer {transfer}")
-                logger.debug(f"b rem owed: {remaining_owed} / rem settle {remaining_to_settle}")
 
         return settle_transfers
