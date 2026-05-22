@@ -1,4 +1,4 @@
-"""Expense sharing tool"""
+"""XPSH - Expense sharing tool"""
 
 import logging
 from pathlib import Path

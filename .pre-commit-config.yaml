@@ -24,7 +24,7 @@ repos:
     rev: v1.20.2
     hooks:
     -   id: mypy
-        files: ^src/expense_share/|^tests
+        files: ^src/xpsh/|^tests
 
 -   repo: https://github.com/commitizen-tools/commitizen
     rev: v4.15.0
@@ -42,7 +42,7 @@ repos:
   rev: 0.8.3
   hooks:
     - id: pydoclint
-      files: ^src/expense_share/
+      files: ^src/xpsh/
 
 - repo: https://github.com/tox-dev/pyproject-fmt
   rev: v2.21.2

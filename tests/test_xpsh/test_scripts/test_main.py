@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from expense_share.ledger import DATE_OUT_FMT
-from expense_share.scripts.main import xpsh
+from xpsh.ledger import DATE_OUT_FMT
+from xpsh.scripts.main import xpsh
 
 
 def test_balance(example_file_path: Path, subtests: pytest.Subtests) -> None:

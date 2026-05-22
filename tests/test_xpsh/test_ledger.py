@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from expense_share.ledger import Account
-from expense_share.ledger import Expense
-from expense_share.ledger import Ledger
-from expense_share.ledger import Transfer
+from xpsh.ledger import Account
+from xpsh.ledger import Expense
+from xpsh.ledger import Ledger
+from xpsh.ledger import Transfer
 
 GENERIC_DATE = date(2000, 1, 1)
 

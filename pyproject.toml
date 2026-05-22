@@ -3,9 +3,9 @@ build-backend = "setuptools.build_meta"
 requires = [ "setuptools>=80", "wheel" ]
 
 [project]
-name = "expense-share"
+name = "xpsh"
 version = "0.1.0"
-description = "Add your description here"
+description = "Expense sharing tool."
 readme = "README.md"
 license-files = [ "LICENSE" ]
 requires-python = ">=3.13"
@@ -18,7 +18,7 @@ dependencies = [
   "click>=8.4",
   "rich>=15",
 ]
-scripts.xpsh = "expense_share.scripts.main:xpsh"
+scripts.xpsh = "xpsh.scripts.main:xpsh"
 
 [dependency-groups]
 dev = [
@@ -68,7 +68,7 @@ log_cli_level = "DEBUG"
 
 [tool.coverage]
 run.branch = true
-run.source = [ "expense_share" ]
+run.source = [ "xpsh" ]
 # Regexes for lines to exclude from consideration
 report.exclude_also = [
   # Don't complain about abstract methods, they aren't run:

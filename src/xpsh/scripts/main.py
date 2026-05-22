@@ -8,10 +8,10 @@ from rich.console import Console
 from rich.pretty import Pretty
 from rich.table import Table
 
-from expense_share import get_version
-from expense_share.ledger import DATE_OUT_FMT
-from expense_share.ledger import Expense
-from expense_share.ledger import Ledger
+from xpsh import get_version
+from xpsh.ledger import DATE_OUT_FMT
+from xpsh.ledger import Expense
+from xpsh.ledger import Ledger
 
 logger = logging.getLogger(__name__)
 
