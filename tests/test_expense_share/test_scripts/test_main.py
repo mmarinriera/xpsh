@@ -1,8 +1,10 @@
+import datetime
 from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
 
+from expense_share.ledger import DATE_OUT_FMT
 from expense_share.scripts.main import xpsh
 
 
@@ -34,11 +36,57 @@ Transfers to settle
         assert result.output == TARGET_OUTPUT
 
 
+def test_expenses(example_file_path: Path, subtests: pytest.Subtests) -> None:
+    TARGET_OUTPUT = """Expenses                                                  
+┏━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┓
+┃       Date ┃ Paid by ┃ Quantity ┃           Assignment ┃
+┡━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━┩
+│ 01/01/2000 │       A │     10.0 │ {'A': 0.5, 'B': 0.5} │
+│ 01/01/2000 │       B │     20.0 │ {'A': 0.5, 'B': 0.5} │
+└────────────┴─────────┴──────────┴──────────────────────┘
+"""
+
+    example_file_path = Path(example_file_path)
+
+    runner = CliRunner()
+    result = runner.invoke(xpsh, ["expenses", str(example_file_path)])
+
+    with subtests.test("Test cli balance exitcode"):
+        assert result.exit_code == 0
+
+    with subtests.test("Test cli balance console output"):
+        assert result.output == TARGET_OUTPUT
+
+
 def test_add_expense(example_file_path: Path, subtests: pytest.Subtests) -> None:
     TARGET_FILE_CONTENT = """A,B
-A,10.0,A:0.5,B:0.5
-B,20.0,A:0.5,B:0.5
-A,25.0,A:0.5,B:0.5
+01/01/2000,A,10.0,A:0.5,B:0.5
+01/01/2000,B,20.0,A:0.5,B:0.5
+01/01/2000,A,25.0,A:0.5,B:0.5
+"""
+
+    example_file_path = Path(example_file_path)
+
+    runner = CliRunner()
+    result = runner.invoke(xpsh, ["add-expense", str(example_file_path), "A", "25", "-d", "01/01/2000"])
+
+    with subtests.test("Test cli add_expense exitcode"):
+        assert result.exit_code == 0
+
+    with subtests.test("Test cli add_expense file output"):
+        with open(example_file_path) as f:
+            file_content = f.read()
+        assert file_content == TARGET_FILE_CONTENT
+
+
+def test_add_expense_default_date(example_file_path: Path, subtests: pytest.Subtests) -> None:
+
+    current_date = datetime.date.today().strftime(DATE_OUT_FMT)
+
+    TARGET_FILE_CONTENT = f"""A,B
+01/01/2000,A,10.0,A:0.5,B:0.5
+01/01/2000,B,20.0,A:0.5,B:0.5
+{current_date},A,25.0,A:0.5,B:0.5
 """
 
     example_file_path = Path(example_file_path)
@@ -57,8 +105,8 @@ A,25.0,A:0.5,B:0.5
 
 def test_add_expense_no_save(example_file_path: Path, subtests: pytest.Subtests) -> None:
     TARGET_FILE_CONTENT = """A,B
-A,10.0,A:0.5,B:0.5
-B,20.0,A:0.5,B:0.5
+01/01/2000,A,10.0,A:0.5,B:0.5
+01/01/2000,B,20.0,A:0.5,B:0.5
 """
 
     TARGET_OUTPUT = """Balance                                     

@@ -1,12 +1,15 @@
+import datetime
 import logging
 from pathlib import Path
 from typing import Any
 
 import click
 from rich.console import Console
+from rich.pretty import Pretty
 from rich.table import Table
 
 from expense_share import get_version
+from expense_share.ledger import DATE_OUT_FMT
 from expense_share.ledger import Expense
 from expense_share.ledger import Ledger
 
@@ -39,6 +42,22 @@ def _pretty_print_balance(ledger: Ledger) -> None:
         settle.add_row(transfer.payer, transfer.recipient, str(transfer.quantity))
 
     console.print(settle)
+
+
+def _pretty_print_expenses(expenses: list[Expense]) -> None:
+    expense_table = Table(title="Expenses", title_justify="left")
+    expense_table.add_column("Date", justify="right")
+    expense_table.add_column("Paid by", justify="right")
+    expense_table.add_column("Quantity", justify="right")
+    expense_table.add_column("Assignment", justify="right")
+
+    for expense in expenses:
+        expense_table.add_row(
+            expense.date.strftime(DATE_OUT_FMT), expense.payer, str(expense.quantity), Pretty(expense.assignment)
+        )
+
+    console = Console()
+    console.print(expense_table)
 
 
 def print_version(ctx: click.Context, _: Any, value: Any) -> None:
@@ -87,6 +106,22 @@ def balance(file_path: Path) -> None:
 
 @xpsh.command
 @click.argument("file_path", type=click.Path(exists=True, resolve_path=True, path_type=Path))
+@click.option("-n", "--n-last-entries", "n_last_entries", default=None, type=int, help="Show N most recent expenses.")
+def expenses(file_path: Path, n_last_entries: int | None) -> None:
+    ledger = Ledger.from_file(file_path)
+    logger.info("Ledger loaded from file")
+    logger.debug(f"expenses {ledger.expenses}")
+
+    if n_last_entries is not None and n_last_entries < len(ledger.expenses):
+        expenses = ledger.expenses[:-n_last_entries]
+    else:
+        expenses = ledger.expenses
+
+    _pretty_print_expenses(expenses)
+
+
+@xpsh.command
+@click.argument("file_path", type=click.Path(exists=True, resolve_path=True, path_type=Path))
 @click.argument("payer", type=str)
 @click.argument("quantity", type=float)
 @click.option(
@@ -99,11 +134,20 @@ def balance(file_path: Path) -> None:
     help="The part assigned to each person.",
 )
 @click.option(
+    "-d", "--date", "date_str", type=str, default=None, help="Date in 'dd/mm/yyy' format (current day by default)."
+)
+@click.option(
     "-p", "--print-output", "print_output", is_flag=True, help="Show the ledger balance after adding the expense."
 )
 @click.option("--no-save", "no_save", is_flag=True, help="Do not update the file with the new expense.")
 def add_expense(
-    file_path: Path, payer: str, quantity: float, assignment: list[tuple[str, float]], print_output: bool, no_save: bool
+    file_path: Path,
+    payer: str,
+    quantity: float,
+    assignment: list[tuple[str, float]],
+    date_str: str | None,
+    print_output: bool,
+    no_save: bool,
 ) -> None:
     ledger = Ledger.from_file(file_path)
     logger.info("Ledger loaded from file")
@@ -112,7 +156,13 @@ def add_expense(
     logger.info("No assignment provided. Equal parts assigned.")
 
     assignment_dict = {v[0]: v[1] for v in assignment}
-    expense = Expense(payer=payer, quantity=quantity, assignment=assignment_dict)
+
+    if date_str is not None:
+        date = datetime.datetime.strptime(date_str, DATE_OUT_FMT).date()
+    else:
+        date = datetime.date.today()
+
+    expense = Expense(payer=payer, quantity=quantity, assignment=assignment_dict, date=date)
     ledger.add_expense(expense)
 
     if print_output:

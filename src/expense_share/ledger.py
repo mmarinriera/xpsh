@@ -1,10 +1,14 @@
 import logging
 from dataclasses import dataclass
 from dataclasses import field
+from datetime import date as Date
+from datetime import datetime
 from pathlib import Path
 from typing import Self
 
 logger = logging.getLogger(__name__)
+
+DATE_OUT_FMT = "%d/%m/%Y"
 
 
 @dataclass
@@ -23,6 +27,7 @@ class Expense:
     payer: str
     quantity: float
     assignment: dict[str, float]
+    date: Date
 
     def __post_init__(self) -> None:
         if sum(list(self.assignment.values())) == 1.0:
@@ -32,6 +37,9 @@ class Expense:
         total = sum(list(self.assignment.values()))
         for name, value in self.assignment.items():
             self.assignment[name] = value / total
+
+    def __repr__(self) -> str:
+        return f"Expense | Payed on: {self.date.strftime(DATE_OUT_FMT)}, by: {self.payer}, quantity: {self.quantity}. Assignment: {self.assignment}."
 
 
 @dataclass
@@ -55,10 +63,11 @@ def _load_ledger_from_file(file_path: Path) -> tuple[list[str], list[Expense]]:
         expenses = []
         for line in f:
             raw = line.strip().split(",")
+            date = datetime.strptime(raw.pop(0), DATE_OUT_FMT).date()
             payer = raw.pop(0)
             quantity = float(raw.pop(0))
             assignment = {val.split(":")[0]: float(val.split(":")[1]) for val in raw}
-            expenses.append(Expense(payer=payer, quantity=quantity, assignment=assignment))
+            expenses.append(Expense(payer=payer, quantity=quantity, assignment=assignment, date=date))
     return members, expenses
 
 
@@ -108,11 +117,14 @@ class Ledger:
         return out
 
     def save_ledger_to_file(self, file_path: Path) -> None:
+        self.expenses = sorted(self.expenses, key=lambda exp: exp.date)
         with open(file_path, "w") as f:
             f.write(",".join(self.members) + "\n")
             for exp in self.expenses:
                 assignment_str = [f"{n}:{d}" for n, d in exp.assignment.items()]
-                f.write(",".join([exp.payer, str(exp.quantity)] + assignment_str) + "\n")
+                f.write(
+                    ",".join([exp.date.strftime(DATE_OUT_FMT), exp.payer, str(exp.quantity)] + assignment_str) + "\n"
+                )
 
     def add_expense(self, expense: Expense) -> None:
         if expense.payer not in self.members:
