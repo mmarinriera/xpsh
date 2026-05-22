@@ -4,6 +4,7 @@ from dataclasses import field
 from datetime import date as Date
 from datetime import datetime
 from pathlib import Path
+from typing import Protocol
 from typing import Self
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,15 @@ class Account:
     @property
     def owed(self) -> float:
         return self.spent - self.paid
+
+
+class LedgerEntry(Protocol):
+    payer: str
+    quantity: float
+    date: Date
+
+    def to_output(self) -> str:
+        raise NotImplementedError
 
 
 @dataclass
@@ -41,12 +51,17 @@ class Expense:
     def __repr__(self) -> str:
         return f"Expense | Payed on: {self.date.strftime(DATE_OUT_FMT)}, by: {self.payer}, quantity: {self.quantity}. Assignment: {self.assignment}."
 
+    def to_output(self) -> str:
+        assignment_str = [f"{n}:{d}" for n, d in self.assignment.items()]
+        return ",".join([self.date.strftime(DATE_OUT_FMT), self.payer, str(self.quantity)] + assignment_str)
+
 
 @dataclass
 class Transfer:
     payer: str
     quantity: float
     recipient: str
+    date: Date = Date.today()
 
     def __post_init__(self) -> None:
         if self.payer == self.recipient:
@@ -55,26 +70,34 @@ class Transfer:
     def __repr__(self) -> str:
         return f"Transfer '{self.payer}' -> '{self.recipient}': {self.quantity}."
 
+    def to_output(self) -> str:
+        return ",".join([self.date.strftime(DATE_OUT_FMT), self.payer, str(self.quantity), self.recipient])
 
-def _load_ledger_from_file(file_path: Path) -> tuple[list[str], list[Expense]]:
+
+def _load_ledger_from_file(file_path: Path) -> tuple[list[str], list[LedgerEntry]]:
     with open(file_path) as f:
         header = next(f)
         members = header.strip().split(",")
-        expenses = []
+        entries: list[LedgerEntry] = []
         for line in f:
             raw = line.strip().split(",")
+            identifier = raw.pop(0)
             date = datetime.strptime(raw.pop(0), DATE_OUT_FMT).date()
             payer = raw.pop(0)
             quantity = float(raw.pop(0))
-            assignment = {val.split(":")[0]: float(val.split(":")[1]) for val in raw}
-            expenses.append(Expense(payer=payer, quantity=quantity, assignment=assignment, date=date))
-    return members, expenses
+            if identifier == "E":
+                assignment = {val.split(":")[0]: float(val.split(":")[1]) for val in raw}
+                entries.append(Expense(payer=payer, quantity=quantity, assignment=assignment, date=date))
+            else:
+                recipient = raw[0]
+                entries.append(Transfer(payer=payer, quantity=quantity, recipient=recipient, date=date))
+    return members, entries
 
 
 @dataclass
 class Ledger:
     members: list[str]
-    expenses: list[Expense] = field(init=False)
+    entries: list[LedgerEntry] = field(init=False)
     accounts: dict[str, Account] = field(init=False)
 
     @property
@@ -92,14 +115,21 @@ class Ledger:
         for name in self.members:
             self.accounts[name] = Account(name=name)
 
-        self.expenses = []
+        self.entries = []
 
     @classmethod
     def from_file(cls, file_path: Path) -> Self:
-        members, expenses = _load_ledger_from_file(file_path)
+        members, entries = _load_ledger_from_file(file_path)
         ledger = cls(members=members)
-        for x in expenses:
-            ledger.add_expense(x)
+
+        for entry in entries:
+            if isinstance(entry, Expense):
+                ledger.add_expense(entry)
+            elif isinstance(entry, Transfer):
+                ledger.add_transfer(entry)
+            else:
+                raise ValueError(f"Unknown Entry type (should never happen). {entry}.")
+
         return ledger
 
     def __repr__(self) -> str:
@@ -117,14 +147,12 @@ class Ledger:
         return out
 
     def save_ledger_to_file(self, file_path: Path) -> None:
-        self.expenses = sorted(self.expenses, key=lambda exp: exp.date)
+        self.entries = sorted(self.entries, key=lambda entry: entry.date)
         with open(file_path, "w") as f:
             f.write(",".join(self.members) + "\n")
-            for exp in self.expenses:
-                assignment_str = [f"{n}:{d}" for n, d in exp.assignment.items()]
-                f.write(
-                    ",".join([exp.date.strftime(DATE_OUT_FMT), exp.payer, str(exp.quantity)] + assignment_str) + "\n"
-                )
+            for entry in self.entries:
+                identifier = "E" if isinstance(entry, Expense) else "T"
+                f.write(f"{identifier},{entry.to_output()}\n")
 
     def add_expense(self, expense: Expense) -> None:
         if expense.payer not in self.members:
@@ -132,7 +160,7 @@ class Ledger:
         if any([m not in self.members for m in expense.assignment]):
             raise ValueError(f"Some recipient not in members. {list(expense.assignment.keys())}")
 
-        self.expenses.append(expense)
+        self.entries.append(expense)
 
         payer_account = self.accounts[expense.payer]
         payer_account.paid += expense.quantity
@@ -140,6 +168,19 @@ class Ledger:
         for name, fraction in expense.assignment.items():
             account = self.accounts[name]
             account.spent += expense.quantity * fraction
+
+    def add_transfer(self, transfer: Transfer) -> None:
+        if transfer.payer not in self.members:
+            raise ValueError(f"Transfer payer not in members. '{transfer.payer}'")
+        if transfer.recipient not in self.members:
+            raise ValueError(f"Transfer recipient not in members. '{transfer.recipient}'")
+
+        self.entries.append(transfer)
+
+        payer_account = self.accounts[transfer.payer]
+        payer_account.paid += transfer.quantity
+        recipient_account = self.accounts[transfer.recipient]
+        recipient_account.paid -= transfer.quantity
 
     def calculate_balance(self) -> list[Transfer]:
         """

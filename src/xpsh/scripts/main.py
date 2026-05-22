@@ -12,6 +12,8 @@ from xpsh import get_version
 from xpsh.ledger import DATE_OUT_FMT
 from xpsh.ledger import Expense
 from xpsh.ledger import Ledger
+from xpsh.ledger import LedgerEntry
+from xpsh.ledger import Transfer
 
 logger = logging.getLogger(__name__)
 
@@ -44,20 +46,28 @@ def _pretty_print_balance(ledger: Ledger) -> None:
     console.print(settle)
 
 
-def _pretty_print_expenses(expenses: list[Expense]) -> None:
-    expense_table = Table(title="Expenses", title_justify="left")
-    expense_table.add_column("Date", justify="right")
-    expense_table.add_column("Paid by", justify="right")
-    expense_table.add_column("Quantity", justify="right")
-    expense_table.add_column("Assignment", justify="right")
+def _pretty_print_entries(entries: list[LedgerEntry]) -> None:
+    entry_table = Table(title="Entries", title_justify="left")
+    entry_table.add_column("Type", justify="right")
+    entry_table.add_column("Date", justify="right")
+    entry_table.add_column("Paid by", justify="right")
+    entry_table.add_column("Quantity", justify="right")
+    entry_table.add_column("Assignment", justify="right")
 
-    for expense in expenses:
-        expense_table.add_row(
-            expense.date.strftime(DATE_OUT_FMT), expense.payer, str(expense.quantity), Pretty(expense.assignment)
-        )
+    for entry in entries:
+        if isinstance(entry, Expense):
+            entry_type = "Expense"
+            assignment = Pretty(entry.assignment)
+        elif isinstance(entry, Transfer):
+            entry_type = "Transfer"
+            assignment = entry.recipient
+        else:
+            raise ValueError(f"Unknown entry type (should never happen). {entry}.")
+
+        entry_table.add_row(entry_type, entry.date.strftime(DATE_OUT_FMT), entry.payer, str(entry.quantity), assignment)
 
     console = Console()
-    console.print(expense_table)
+    console.print(entry_table)
 
 
 def print_version(ctx: click.Context, _: Any, value: Any) -> None:
@@ -110,14 +120,13 @@ def balance(file_path: Path) -> None:
 def expenses(file_path: Path, n_last_entries: int | None) -> None:
     ledger = Ledger.from_file(file_path)
     logger.info("Ledger loaded from file")
-    logger.debug(f"expenses {ledger.expenses}")
 
-    if n_last_entries is not None and n_last_entries < len(ledger.expenses):
-        expenses = ledger.expenses[:-n_last_entries]
+    if n_last_entries is not None and n_last_entries < len(ledger.entries):
+        entries = ledger.entries[:-n_last_entries]
     else:
-        expenses = ledger.expenses
+        entries = ledger.entries
 
-    _pretty_print_expenses(expenses)
+    _pretty_print_entries(entries)
 
 
 @xpsh.command
@@ -164,6 +173,48 @@ def add_expense(
 
     expense = Expense(payer=payer, quantity=quantity, assignment=assignment_dict, date=date)
     ledger.add_expense(expense)
+
+    if print_output:
+        _pretty_print_balance(ledger)
+
+    if no_save:
+        return
+
+    ledger.save_ledger_to_file(file_path)
+    logger.info("Updated ledger saved to file.")
+
+
+@xpsh.command
+@click.argument("file_path", type=click.Path(exists=True, resolve_path=True, path_type=Path))
+@click.argument("payer", type=str)
+@click.argument("quantity", type=float)
+@click.argument("recipient")
+@click.option(
+    "-d", "--date", "date_str", type=str, default=None, help="Date in 'dd/mm/yyy' format (current day by default)."
+)
+@click.option(
+    "-p", "--print-output", "print_output", is_flag=True, help="Show the ledger balance after adding the expense."
+)
+@click.option("--no-save", "no_save", is_flag=True, help="Do not update the file with the new expense.")
+def add_transfer(
+    file_path: Path,
+    payer: str,
+    quantity: float,
+    recipient: str,
+    date_str: str | None,
+    print_output: bool,
+    no_save: bool,
+) -> None:
+    ledger = Ledger.from_file(file_path)
+    logger.info("Ledger loaded from file")
+
+    if date_str is not None:
+        date = datetime.datetime.strptime(date_str, DATE_OUT_FMT).date()
+    else:
+        date = datetime.date.today()
+
+    transfer = Transfer(payer=payer, quantity=quantity, recipient=recipient, date=date)
+    ledger.add_transfer(transfer)
 
     if print_output:
         _pretty_print_balance(ledger)

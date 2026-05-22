@@ -37,13 +37,13 @@ Transfers to settle
 
 
 def test_expenses(example_file_path: Path, subtests: pytest.Subtests) -> None:
-    TARGET_OUTPUT = """Expenses                                                  
-┏━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┓
-┃       Date ┃ Paid by ┃ Quantity ┃           Assignment ┃
-┡━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━┩
-│ 01/01/2000 │       A │     10.0 │ {'A': 0.5, 'B': 0.5} │
-│ 01/01/2000 │       B │     20.0 │ {'A': 0.5, 'B': 0.5} │
-└────────────┴─────────┴──────────┴──────────────────────┘
+    TARGET_OUTPUT = """Entries                                                             
+┏━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┓
+┃    Type ┃       Date ┃ Paid by ┃ Quantity ┃           Assignment ┃
+┡━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━┩
+│ Expense │ 01/01/2000 │       A │     10.0 │ {'A': 0.5, 'B': 0.5} │
+│ Expense │ 01/01/2000 │       B │     20.0 │ {'A': 0.5, 'B': 0.5} │
+└─────────┴────────────┴─────────┴──────────┴──────────────────────┘
 """
 
     example_file_path = Path(example_file_path)
@@ -60,9 +60,9 @@ def test_expenses(example_file_path: Path, subtests: pytest.Subtests) -> None:
 
 def test_add_expense(example_file_path: Path, subtests: pytest.Subtests) -> None:
     TARGET_FILE_CONTENT = """A,B
-01/01/2000,A,10.0,A:0.5,B:0.5
-01/01/2000,B,20.0,A:0.5,B:0.5
-01/01/2000,A,25.0,A:0.5,B:0.5
+E,01/01/2000,A,10.0,A:0.5,B:0.5
+E,01/01/2000,B,20.0,A:0.5,B:0.5
+E,01/01/2000,A,25.0,A:0.5,B:0.5
 """
 
     example_file_path = Path(example_file_path)
@@ -84,9 +84,9 @@ def test_add_expense_default_date(example_file_path: Path, subtests: pytest.Subt
     current_date = datetime.date.today().strftime(DATE_OUT_FMT)
 
     TARGET_FILE_CONTENT = f"""A,B
-01/01/2000,A,10.0,A:0.5,B:0.5
-01/01/2000,B,20.0,A:0.5,B:0.5
-{current_date},A,25.0,A:0.5,B:0.5
+E,01/01/2000,A,10.0,A:0.5,B:0.5
+E,01/01/2000,B,20.0,A:0.5,B:0.5
+E,{current_date},A,25.0,A:0.5,B:0.5
 """
 
     example_file_path = Path(example_file_path)
@@ -105,8 +105,8 @@ def test_add_expense_default_date(example_file_path: Path, subtests: pytest.Subt
 
 def test_add_expense_no_save(example_file_path: Path, subtests: pytest.Subtests) -> None:
     TARGET_FILE_CONTENT = """A,B
-01/01/2000,A,10.0,A:0.5,B:0.5
-01/01/2000,B,20.0,A:0.5,B:0.5
+E,01/01/2000,A,10.0,A:0.5,B:0.5
+E,01/01/2000,B,20.0,A:0.5,B:0.5
 """
 
     TARGET_OUTPUT = """Balance                                     
@@ -134,3 +134,15 @@ The balance is settled!
 
     with subtests.test("Test cli add_expense console output"):
         assert result.output == TARGET_OUTPUT
+
+
+def test_add_transfer(example_file_path: Path, subtests: pytest.Subtests) -> None:
+    pass
+
+
+def test_add_transfer_default_date(example_file_path: Path, subtests: pytest.Subtests) -> None:
+    pass
+
+
+def test_add_transfer_no_save(example_file_path: Path, subtests: pytest.Subtests) -> None:
+    pass

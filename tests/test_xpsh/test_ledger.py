@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from xpsh.ledger import DATE_OUT_FMT
 from xpsh.ledger import Account
 from xpsh.ledger import Expense
 from xpsh.ledger import Ledger
@@ -18,6 +19,7 @@ def test_account() -> None:
 
 def test_expense(subtests: pytest.Subtests) -> None:
     expense_0 = Expense(payer="A", quantity=10.0, assignment={"A": 0.5, "B": 0.5}, date=GENERIC_DATE)
+    TARGET_OUTPUT = "01/01/2000,A,10.0,A:0.5,B:0.5"
     expense_1 = Expense(payer="A", quantity=20.0, assignment={"A": 3, "B": 1}, date=GENERIC_DATE)
 
     with subtests.test("Test expense assignments with fractions"):
@@ -26,10 +28,16 @@ def test_expense(subtests: pytest.Subtests) -> None:
     with subtests.test("Test expense assignments with integer parts"):
         assert expense_1.assignment == {"A": 0.75, "B": 0.25}
 
+    with subtests.test("Test expense output."):
+        assert expense_0.to_output() == TARGET_OUTPUT
+
 
 def test_transfer(subtests: pytest.Subtests) -> None:
-    transfer_0 = Transfer(payer="A", quantity=10.0, recipient="B")
+    transfer_0 = Transfer(payer="A", quantity=10.0, recipient="B", date=GENERIC_DATE)
     TARGET_REPR = "Transfer 'A' -> 'B': 10.0."
+    TARGET_OUTPUT_0 = "01/01/2000,A,10.0,B"
+    transfer_1 = Transfer(payer="A", quantity=10.0, recipient="B")
+    TARGET_OUTPUT_1 = f"{date.today().strftime(DATE_OUT_FMT)},A,10.0,B"
 
     with subtests.test("Test transfer representation"):
         assert str(transfer_0) == TARGET_REPR
@@ -37,6 +45,12 @@ def test_transfer(subtests: pytest.Subtests) -> None:
     with subtests.test("Test transfer payer is same as recipient"):
         with pytest.raises(ValueError, match="Payer and recipient must be different."):
             _ = Transfer(payer="A", quantity=20.0, recipient="A")
+
+    with subtests.test("Test transfer output."):
+        assert transfer_0.to_output() == TARGET_OUTPUT_0
+
+    with subtests.test("Test transfer output default date."):
+        assert transfer_1.to_output() == TARGET_OUTPUT_1
 
 
 def test_ledger_init(subtests: pytest.Subtests) -> None:
@@ -70,13 +84,13 @@ def test_ledger_load_from_file(example_file_path: Path, subtests: pytest.Subtest
     with subtests.test("Test ledger from file: accounts"):
         assert ledger.accounts == TARGET_ACCOUNTS
     with subtests.test("Test ledger from file: expenses"):
-        assert [str(exp) for exp in ledger.expenses] == TARGET_EXPENSES
+        assert [str(entry) for entry in ledger.entries] == TARGET_EXPENSES
 
 
 def test_ledger_save_to_file(tmp_path: Path) -> None:
     TARGET_FILE_CONTENT = """A,B
-01/01/2000,A,10.0,A:0.5,B:0.5
-01/01/2000,B,20.0,A:0.5,B:0.5
+E,01/01/2000,A,10.0,A:0.5,B:0.5
+E,01/01/2000,B,20.0,A:0.5,B:0.5
 """
     ledger = Ledger(members=["A", "B"])
     ledger.add_expense(Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}, date=GENERIC_DATE))
@@ -92,9 +106,9 @@ def test_ledger_save_to_file(tmp_path: Path) -> None:
 
 def test_ledger_save_to_file_unsorted(tmp_path: Path) -> None:
     TARGET_FILE_CONTENT = """A,B
-01/01/2000,A,10.0,A:0.5,B:0.5
-02/01/2000,B,20.0,A:0.5,B:0.5
-03/01/2000,B,30.0,A:0.5,B:0.5
+E,01/01/2000,A,10.0,A:0.5,B:0.5
+E,02/01/2000,B,20.0,A:0.5,B:0.5
+E,03/01/2000,B,30.0,A:0.5,B:0.5
 """
     ledger = Ledger(members=["A", "B"])
     ledger.add_expense(Expense(payer="B", quantity=30.0, assignment={"A": 1, "B": 1}, date=date(2000, 1, 3)))
