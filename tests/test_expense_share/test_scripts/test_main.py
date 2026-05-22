@@ -7,12 +7,19 @@ from expense_share.scripts.main import xpsh
 
 
 def test_balance(example_file_path: Path, subtests: pytest.Subtests) -> None:
-    TARGET_OUTPUT = """Member\tTotal Expenses\tTotal Paid\tOwed
-* A\t15.0\t\t10.0\t\t5.0
-* B\t15.0\t\t20.0\t\t-5.0
-
-Transfers to settle:
-* Transfer 'A' -> 'B': 5.0.
+    TARGET_OUTPUT = """Balance                                     
+┏━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━┓
+┃ Member ┃ Total spent ┃ Total paid ┃ Owed ┃
+┡━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━┩
+│      A │        15.0 │       10.0 │  5.0 │
+│      B │        15.0 │       20.0 │ -5.0 │
+└────────┴─────────────┴────────────┴──────┘
+Transfers to settle     
+┏━━━━━━┳━━━━┳━━━━━━━━━━┓
+┃ From ┃ To ┃ Quantity ┃
+┡━━━━━━╇━━━━╇━━━━━━━━━━┩
+│    A │  B │      5.0 │
+└──────┴────┴──────────┘
 """
 
     example_file_path = Path(example_file_path)
@@ -54,11 +61,14 @@ A,10.0,A:0.5,B:0.5
 B,20.0,A:0.5,B:0.5
 """
 
-    TARGET_OUTPUT = """Member\tTotal Expenses\tTotal Paid\tOwed
-* A\t35.0\t\t35.0\t\t0.0
-* B\t20.0\t\t20.0\t\t0.0
-
-Expenses are balanced.
+    TARGET_OUTPUT = """Balance                                     
+┏━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━┓
+┃ Member ┃ Total spent ┃ Total paid ┃ Owed ┃
+┡━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━┩
+│      A │        35.0 │       35.0 │  0.0 │
+│      B │        20.0 │       20.0 │  0.0 │
+└────────┴─────────────┴────────────┴──────┘
+The balance is settled!
 """
 
     runner = CliRunner()

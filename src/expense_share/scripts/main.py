@@ -3,12 +3,42 @@ from pathlib import Path
 from typing import Any
 
 import click
+from rich.console import Console
+from rich.table import Table
 
 from expense_share import get_version
 from expense_share.ledger import Expense
 from expense_share.ledger import Ledger
 
 logger = logging.getLogger(__name__)
+
+
+def _pretty_print_balance(ledger: Ledger) -> None:
+    balance = Table(title="Balance", title_justify="left")
+    balance.add_column("Member", justify="right", style="cyan", no_wrap=True)
+    balance.add_column("Total spent", justify="right")
+    balance.add_column("Total paid", justify="right")
+    balance.add_column("Owed", justify="right", style="magenta")
+
+    for name, account in ledger.accounts.items():
+        balance.add_row(name, str(account.spent), str(account.paid), str(account.owed))
+
+    console = Console()
+    console.print(balance)
+
+    settle = Table(title="Transfers to settle", title_justify="left")
+    settle.add_column("From", justify="right", style="cyan")
+    settle.add_column("To", justify="right", style="cyan")
+    settle.add_column("Quantity", justify="right", style="green")
+
+    if not ledger.settle_transfers:
+        console.print("[bold green]The balance is settled![/bold green]")
+        return
+
+    for transfer in ledger.settle_transfers:
+        settle.add_row(transfer.payer, transfer.recipient, str(transfer.quantity))
+
+    console.print(settle)
 
 
 def print_version(ctx: click.Context, _: Any, value: Any) -> None:
@@ -52,7 +82,7 @@ def xpsh(ctx: click.Context, debug_mode: bool) -> None:
 def balance(file_path: Path) -> None:
     ledger = Ledger.from_file(file_path)
     logger.info("Ledger loaded from file")
-    click.echo(ledger)
+    _pretty_print_balance(ledger)
 
 
 @xpsh.command
@@ -86,7 +116,7 @@ def add_expense(
     ledger.add_expense(expense)
 
     if print_output:
-        click.echo(ledger)
+        _pretty_print_balance(ledger)
 
     if no_save:
         return
