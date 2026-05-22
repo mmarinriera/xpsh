@@ -1,0 +1,30 @@
+requires = [ "tox>=4" ]
+env_list = [ "py313", "prek", "ty" ]
+
+[env_run_base]
+runner = "uv-venv-lock-runner"
+description = "Running tests and generate coverage report."
+dependency_groups = [ "dev" ]
+commands = [
+  [ "coverage", "run", "-m", "pytest" ],
+  [ "coverage", "report", "--fail-under=10" ],
+  [ "coverage", "html" ],
+]
+with_dev = true
+
+[env.prek]
+runner = "uv-venv-runner"
+description = "Running pre-commit checks (formatting, linting, type checking) with prek."
+skip_install = true
+deps = "prek==0.4.1"
+commands = [
+  [ "prek", "run", "--all-files", "--show-diff-on-failure" ],
+]
+
+[env.ty]
+runner = "uv-venv-runner"
+description = "Running type checks with ty."
+deps = "ty==0.0.38"
+commands = [
+  [ "ty", "check", "." ],
+]

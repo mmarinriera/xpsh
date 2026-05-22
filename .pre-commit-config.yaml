@@ -48,3 +48,9 @@ repos:
   rev: v2.21.2
   hooks:
     - id: pyproject-fmt
+
+- repo: https://github.com/tox-dev/tox-toml-fmt
+  rev: v1.9.3
+  hooks:
+    - id: tox-toml-fmt
+      files: tox.toml
