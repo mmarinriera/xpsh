@@ -186,6 +186,38 @@ def test_add_expense(subtests: pytest.Subtests) -> None:
             ledger.add_expense(Expense(payer="A", quantity=5.0, assignment={"A": 1, "B": 1, "C": 1}, date=GENERIC_DATE))
 
 
+def test_add_transfer(subtests: pytest.Subtests) -> None:
+    ledger = Ledger(members=["A", "B"])
+    ledger.add_expense(Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}, date=GENERIC_DATE))
+    ledger.add_transfer(Transfer(payer="B", quantity=5.0, recipient="A", date=GENERIC_DATE))
+
+    with subtests.test("Test add transfer to settle."):
+        assert ledger.accounts["A"].paid == 5.0
+        assert ledger.accounts["A"].spent == 5.0
+        assert ledger.accounts["A"].owed == 0.0
+        assert ledger.accounts["B"].paid == 5.0
+        assert ledger.accounts["B"].spent == 5.0
+        assert ledger.accounts["B"].owed == 0.0
+
+    ledger.add_expense(Expense(payer="B", quantity=10.0, assignment={"A": 1, "B": 1}, date=GENERIC_DATE))
+    ledger.add_transfer(Transfer(payer="A", quantity=10.0, recipient="B", date=GENERIC_DATE))
+    with subtests.test("Test add transfer to oversoot."):
+        assert ledger.accounts["A"].paid == 15.0
+        assert ledger.accounts["A"].spent == 10.0
+        assert ledger.accounts["A"].owed == -5.0
+        assert ledger.accounts["B"].paid == 5.0
+        assert ledger.accounts["B"].spent == 10.0
+        assert ledger.accounts["B"].owed == 5.0
+
+    with subtests.test("Add transfer with unknown payer."):
+        with pytest.raises(ValueError, match="Transfer payer not in members. 'C'"):
+            ledger.add_transfer(Transfer(payer="C", quantity=5.0, recipient="B", date=GENERIC_DATE))
+
+    with subtests.test("Add transfer with unknown recipient."):
+        with pytest.raises(ValueError, match="Transfer recipient not in members. 'C'"):
+            ledger.add_transfer(Transfer(payer="A", quantity=5.0, recipient="C", date=GENERIC_DATE))
+
+
 def test_calculate_balance(subtests: pytest.Subtests) -> None:
     ledger_0 = Ledger(members=["A", "B"])
     ledger_0.add_expense(Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}, date=GENERIC_DATE))
@@ -219,3 +251,9 @@ def test_calculate_balance(subtests: pytest.Subtests) -> None:
 
     with subtests.test("Calculate balance with 4 members and 3 transfers"):
         assert sorted(ledger_2.calculate_balance(), key=lambda t: t.quantity) == TARGET_TRANSFERS_2
+
+    for transfer in TARGET_TRANSFERS_2:
+        ledger_2.add_transfer(transfer)
+
+    with subtests.test("Calculate balance after adding transfers to ledger"):
+        assert not ledger_2.calculate_balance()

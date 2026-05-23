@@ -137,12 +137,75 @@ The balance is settled!
 
 
 def test_add_transfer(example_file_path: Path, subtests: pytest.Subtests) -> None:
-    pass
+    TARGET_FILE_CONTENT = """A,B
+E,01/01/2000,A,10.0,A:0.5,B:0.5
+E,01/01/2000,B,20.0,A:0.5,B:0.5
+T,01/01/2000,A,5.0,B
+"""
+
+    example_file_path = Path(example_file_path)
+
+    runner = CliRunner()
+    result = runner.invoke(xpsh, ["add-transfer", str(example_file_path), "A", "5", "B", "-d", "01/01/2000"])
+
+    with subtests.test("Test cli add-transfer exitcode"):
+        assert result.exit_code == 0
+
+    with subtests.test("Test cli add-transffer file output"):
+        with open(example_file_path) as f:
+            file_content = f.read()
+        assert file_content == TARGET_FILE_CONTENT
 
 
 def test_add_transfer_default_date(example_file_path: Path, subtests: pytest.Subtests) -> None:
-    pass
+    current_date = datetime.date.today().strftime(DATE_OUT_FMT)
+
+    TARGET_FILE_CONTENT = f"""A,B
+E,01/01/2000,A,10.0,A:0.5,B:0.5
+E,01/01/2000,B,20.0,A:0.5,B:0.5
+T,{current_date},A,5.0,B
+"""
+
+    example_file_path = Path(example_file_path)
+
+    runner = CliRunner()
+    result = runner.invoke(xpsh, ["add-transfer", str(example_file_path), "A", "5", "B"])
+
+    with subtests.test("Test cli add-transfer exitcode"):
+        assert result.exit_code == 0
+
+    with subtests.test("Test cli add-transfer file output"):
+        with open(example_file_path) as f:
+            file_content = f.read()
+        assert file_content == TARGET_FILE_CONTENT
 
 
 def test_add_transfer_no_save(example_file_path: Path, subtests: pytest.Subtests) -> None:
-    pass
+    TARGET_FILE_CONTENT = """A,B
+E,01/01/2000,A,10.0,A:0.5,B:0.5
+E,01/01/2000,B,20.0,A:0.5,B:0.5
+"""
+
+    TARGET_OUTPUT = """Balance                                     
+┏━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━┓
+┃ Member ┃ Total spent ┃ Total paid ┃ Owed ┃
+┡━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━┩
+│      A │        15.0 │       15.0 │  0.0 │
+│      B │        15.0 │       15.0 │  0.0 │
+└────────┴─────────────┴────────────┴──────┘
+The balance is settled!
+"""
+
+    runner = CliRunner()
+    result = runner.invoke(xpsh, ["add-transfer", str(example_file_path), "A", "5", "B", "-p", "--no-save"])
+
+    with subtests.test("Test cli add-transfer --no-save exitcode"):
+        assert result.exit_code == 0
+
+    with subtests.test("Test cli add-transfer --no-save file output"):
+        with open(example_file_path) as f:
+            file_content = f.read()
+        assert file_content == TARGET_FILE_CONTENT
+
+    with subtests.test("Test cli add-transfer console output"):
+        assert result.output == TARGET_OUTPUT
