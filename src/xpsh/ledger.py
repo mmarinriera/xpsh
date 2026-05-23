@@ -1,8 +1,7 @@
+import datetime
 import logging
 from dataclasses import dataclass
 from dataclasses import field
-from datetime import date as Date
-from datetime import datetime
 from pathlib import Path
 from typing import Protocol
 from typing import Self
@@ -26,7 +25,7 @@ class Account:
 class LedgerEntry(Protocol):
     payer: str
     quantity: float
-    date: Date
+    date: datetime.date
 
     def to_output(self) -> str:
         raise NotImplementedError
@@ -37,7 +36,7 @@ class Expense:
     payer: str
     quantity: float
     assignment: dict[str, float]
-    date: Date
+    date: datetime.date
 
     def __post_init__(self) -> None:
         if sum(list(self.assignment.values())) == 1.0:
@@ -61,7 +60,7 @@ class Transfer:
     payer: str
     quantity: float
     recipient: str
-    date: Date = Date.today()
+    date: datetime.date = datetime.date.today()
 
     def __post_init__(self) -> None:
         if self.payer == self.recipient:
@@ -82,7 +81,7 @@ def _load_ledger_from_file(file_path: Path) -> tuple[list[str], list[LedgerEntry
         for line in f:
             raw = line.strip().split(",")
             identifier = raw.pop(0)
-            date = datetime.strptime(raw.pop(0), DATE_OUT_FMT).date()
+            date = datetime.datetime.strptime(raw.pop(0), DATE_OUT_FMT).date()
             payer = raw.pop(0)
             quantity = float(raw.pop(0))
             if identifier == "E":
