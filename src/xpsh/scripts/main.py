@@ -98,15 +98,18 @@ def _pretty_print_entries(ledger: Ledger, n_last_entries: int | None) -> None:
     entry_table.add_column("Date", justify="right")
     entry_table.add_column("Paid by", justify="right")
     entry_table.add_column("Quantity", justify="right")
+    entry_table.add_column("Concept", justify="right")
     entry_table.add_column("Assignment / Recipient", justify="left")
 
     for entry in entries:
         if isinstance(entry, Expense):
             entry_type = Text("Expense")
             assignment = AssignmentDictRenderer(entry.assignment, name_color_map)
+            concept = Text(entry.concept)
         elif isinstance(entry, Transfer):
             entry_type = Text("Transfer", style=COLOR_TRANSFER_TYPE)
             assignment = Text(entry.recipient, style=name_color_map[entry.recipient])
+            concept = Text("-")
         else:
             raise ValueError(f"Unknown entry type (should never happen). {entry}.")
 
@@ -115,6 +118,7 @@ def _pretty_print_entries(ledger: Ledger, n_last_entries: int | None) -> None:
             entry.date.strftime(DATE_OUT_FMT),
             Text(entry.payer, style=name_color_map[entry.payer]),
             Text(f"{entry.quantity}"),
+            concept,
             assignment,
         )
 
@@ -180,6 +184,7 @@ def expenses(file_path: Path, n_last_entries: int | None) -> None:
 @click.argument("file_path", type=click.Path(exists=True, resolve_path=True, path_type=Path))
 @click.argument("payer", type=str)
 @click.argument("quantity", type=float)
+@click.argument("concept", type=str)
 @click.option(
     "-a",
     "--assignment",
@@ -200,6 +205,7 @@ def add_expense(
     file_path: Path,
     payer: str,
     quantity: float,
+    concept: str,
     assignment: list[tuple[str, float]],
     date_str: str | None,
     print_output: bool,
@@ -218,7 +224,7 @@ def add_expense(
     else:
         date = datetime.date.today()
 
-    expense = Expense(payer=payer, quantity=quantity, assignment=assignment_dict, date=date)
+    expense = Expense(payer=payer, quantity=quantity, concept=concept, assignment=assignment_dict, date=date)
     ledger.add_expense(expense)
 
     if print_output:

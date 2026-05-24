@@ -35,6 +35,7 @@ class LedgerEntry(Protocol):
 class Expense:
     payer: str
     quantity: float
+    concept: str
     assignment: dict[str, float]
     date: datetime.date
 
@@ -48,11 +49,14 @@ class Expense:
             self.assignment[name] = value / total
 
     def __repr__(self) -> str:
-        return f"Expense | Payed on: {self.date.strftime(DATE_OUT_FMT)}, by: {self.payer}, quantity: {self.quantity}. Assignment: {self.assignment}."
+        return f"Expense | Payed on: {self.date.strftime(DATE_OUT_FMT)}, by: {self.payer}, quantity: {self.quantity}, for: {self.concept}. Assignment: {self.assignment}."
 
     def to_output(self) -> str:
-        assignment_str = [f"{n}:{d}" for n, d in self.assignment.items()]
-        return ",".join([self.date.strftime(DATE_OUT_FMT), self.payer, str(self.quantity)] + assignment_str)
+        assignment_out = [f"{n}:{d}" for n, d in self.assignment.items()]
+        concept_out = self.concept.replace(",", "")
+        return ",".join(
+            [self.date.strftime(DATE_OUT_FMT), self.payer, str(self.quantity), concept_out] + assignment_out
+        )
 
 
 @dataclass
@@ -85,8 +89,11 @@ def _load_ledger_from_file(file_path: Path) -> tuple[list[str], list[LedgerEntry
             payer = raw.pop(0)
             quantity = float(raw.pop(0))
             if identifier == "E":
+                concept = raw.pop(0)
                 assignment = {val.split(":")[0]: float(val.split(":")[1]) for val in raw}
-                entries.append(Expense(payer=payer, quantity=quantity, assignment=assignment, date=date))
+                entries.append(
+                    Expense(payer=payer, quantity=quantity, concept=concept, assignment=assignment, date=date)
+                )
             else:
                 recipient = raw[0]
                 entries.append(Transfer(payer=payer, quantity=quantity, recipient=recipient, date=date))

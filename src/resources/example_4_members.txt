@@ -1,4 +1,4 @@
 Leonardo,Donatello,Raphael,Michelangelo
-E,01/01/1995,Leonardo,20.0,Leonardo:0.25,Donatello:0.25,Raphael:0.25,Michelangelo:0.25
-E,01/01/1995,Donatello,20.0,Donatello:0.25,Michelangelo:0.75
+E,01/01/1995,Leonardo,20.0,Pizza,Leonardo:0.25,Donatello:0.25,Raphael:0.25,Michelangelo:0.25
+E,01/01/1995,Donatello,20.0,Nunchuks,Donatello:0.25,Michelangelo:0.75
 T,02/01/1995,Donatello,10.0,Leonardo
