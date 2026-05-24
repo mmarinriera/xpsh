@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
 from typing import Protocol
-from typing import Self
 
 logger = logging.getLogger(__name__)
 
@@ -77,66 +76,60 @@ class Transfer:
         return ",".join([self.date.strftime(DATE_OUT_FMT), self.payer, str(self.quantity), self.recipient])
 
 
-def _load_ledger_from_file(file_path: Path) -> tuple[list[str], list[LedgerEntry]]:
-    with open(file_path) as f:
-        header = next(f)
-        members = header.strip().split(",")
-        entries: list[LedgerEntry] = []
-        for line in f:
-            raw = line.strip().split(",")
-            identifier = raw.pop(0)
-            date = datetime.datetime.strptime(raw.pop(0), DATE_OUT_FMT).date()
-            payer = raw.pop(0)
-            quantity = float(raw.pop(0))
-            if identifier == "E":
-                concept = raw.pop(0)
-                assignment = {val.split(":")[0]: float(val.split(":")[1]) for val in raw}
-                entries.append(
-                    Expense(payer=payer, quantity=quantity, concept=concept, assignment=assignment, date=date)
-                )
-            else:
-                recipient = raw[0]
-                entries.append(Transfer(payer=payer, quantity=quantity, recipient=recipient, date=date))
-    return members, entries
+def _member_list_sanity_check(members: list[str]) -> None:
+    if len(members) <= 1:
+        raise ValueError(f"Include at least two members. {members}")
+
+    if len(set(members)) < len(members):
+        raise ValueError(f"Duplicate member names. {members}")
 
 
 @dataclass
 class Ledger:
-    members: list[str]
-    entries: list[LedgerEntry] = field(init=False)
-    accounts: dict[str, Account] = field(init=False)
+    file_path: Path
+    members: list[str] = field(default_factory=list)
+    entries: list[LedgerEntry] = field(default_factory=list)
+    accounts: dict[str, Account] = field(default_factory=dict)
 
     @property
     def settle_transfers(self) -> list[Transfer]:
         return self.calculate_balance()
 
     def __post_init__(self) -> None:
-        if len(self.members) <= 1:
-            raise ValueError("Include at least two members.")
+        if self.file_path.exists():
+            self.load_data_from_file()
+            return
 
-        if len(set(self.members)) < len(self.members):
-            raise ValueError("Duplicate member names.")
+        _member_list_sanity_check(self.members)
 
-        self.accounts = {}
         for name in self.members:
             self.accounts[name] = Account(name=name)
 
-        self.entries = []
+    def load_data_from_file(self) -> None:
+        with open(self.file_path) as f:
+            header = next(f)
+            self.members = header.strip().split(",")
+            _member_list_sanity_check(self.members)
+            for name in self.members:
+                self.accounts[name] = Account(name=name)
 
-    @classmethod
-    def from_file(cls, file_path: Path) -> Self:
-        members, entries = _load_ledger_from_file(file_path)
-        ledger = cls(members=members)
-
-        for entry in entries:
-            if isinstance(entry, Expense):
-                ledger.add_expense(entry)
-            elif isinstance(entry, Transfer):
-                ledger.add_transfer(entry)
-            else:
-                raise ValueError(f"Unknown Entry type (should never happen). {entry}.")
-
-        return ledger
+            for line in f:
+                raw = line.strip().split(",")
+                identifier = raw.pop(0)
+                date = datetime.datetime.strptime(raw.pop(0), DATE_OUT_FMT).date()
+                payer = raw.pop(0)
+                quantity = float(raw.pop(0))
+                if identifier == "E":
+                    concept = raw.pop(0)
+                    assignment = {val.split(":")[0]: float(val.split(":")[1]) for val in raw}
+                    self.add_expense(
+                        Expense(payer=payer, quantity=quantity, concept=concept, assignment=assignment, date=date)
+                    )
+                elif identifier == "T":
+                    recipient = raw[0]
+                    self.add_transfer(Transfer(payer=payer, quantity=quantity, recipient=recipient, date=date))
+                else:
+                    raise ValueError(f"Unknown Entry type while reading file. '{line.strip()}'.")
 
     def __repr__(self) -> str:
         out = "Member\tTotal Expenses\tTotal Paid\tOwed"
@@ -152,9 +145,9 @@ class Ledger:
             out += f"\n* {transfer}"
         return out
 
-    def save_ledger_to_file(self, file_path: Path) -> None:
+    def save_to_file(self) -> None:
         self.entries = sorted(self.entries, key=lambda entry: entry.date)
-        with open(file_path, "w") as f:
+        with open(self.file_path, "w") as f:
             f.write(",".join(self.members) + "\n")
             for entry in self.entries:
                 identifier = "E" if isinstance(entry, Expense) else "T"

@@ -53,18 +53,22 @@ def test_transfer(subtests: pytest.Subtests) -> None:
         assert transfer_1.to_output() == TARGET_OUTPUT_1
 
 
-def test_ledger_init(subtests: pytest.Subtests) -> None:
-    ledger_0 = Ledger(members=["A", "B", "C"])
+def test_ledger_init(subtests: pytest.Subtests, tmp_path: Path) -> None:
+    out_path = tmp_path / "out.txt"
+    ledger_0 = Ledger(file_path=out_path, members=["A", "B", "C"])
     with subtests.test("Test ledger accounts attribute"):
         assert list(ledger_0.accounts.keys()) == ledger_0.members
         assert all([isinstance(a, Account) for a in ledger_0.accounts.values()])
 
     with subtests.test("Test ledger with members < 2"):
-        with pytest.raises(ValueError, match="Include at least two members."):
-            _ = Ledger(members=["A"])
+        with pytest.raises(ValueError, match=r"Include at least two members. \['A'\]"):
+            _ = Ledger(file_path=out_path, members=["A"])
 
-    with subtests.test("Test ledger duplicate members"), pytest.raises(ValueError, match="Duplicate member names."):
-        _ = Ledger(members=["A", "A"])
+    with (
+        subtests.test("Test ledger duplicate members"),
+        pytest.raises(ValueError, match=r"Duplicate member names. \['A', 'A'\]"),
+    ):
+        _ = Ledger(file_path=out_path, members=["A", "A"])
 
 
 def test_ledger_load_from_file(example_file_path: Path, subtests: pytest.Subtests) -> None:
@@ -80,7 +84,7 @@ def test_ledger_load_from_file(example_file_path: Path, subtests: pytest.Subtest
         ),
     ]
 
-    ledger = Ledger.from_file(example_file_path)
+    ledger = Ledger(file_path=example_file_path)
     with subtests.test("Test ledger from file: members"):
         assert ledger.members == TARGET_MEMBERS
     with subtests.test("Test ledger from file: accounts"):
@@ -88,13 +92,41 @@ def test_ledger_load_from_file(example_file_path: Path, subtests: pytest.Subtest
     with subtests.test("Test ledger from file: expenses"):
         assert [str(entry) for entry in ledger.entries] == TARGET_EXPENSES
 
+    ledger_with_params = Ledger(file_path=example_file_path, members=["C", "D"])
+    with subtests.test("Test ledger from file superseeds constructor params"):
+        assert ledger_with_params.members == TARGET_MEMBERS
+
+
+def test_ledger_load_from_faulty_file(tmp_path: Path, subtests: pytest.Subtests) -> None:
+    out_path_0 = tmp_path / "faulty_0.txt"
+    with open(out_path_0, "w") as f:
+        f.write("CD\nE,CD,10.0\n")
+    with subtests.test("Test ledger load file with single member"):
+        with pytest.raises(ValueError, match=r"Include at least two members. \['CD'\]"):
+            _ = Ledger(out_path_0)
+
+    out_path_1 = tmp_path / "faulty_1.txt"
+    with open(out_path_1, "w") as f:
+        f.write("C,C,D\nE,C,10.0\n")
+    with subtests.test("Test ledger load file with duplicate member"):
+        with pytest.raises(ValueError, match=r"Duplicate member names. \['C', 'C', 'D'\]"):
+            _ = Ledger(out_path_1)
+
+    out_path_2 = tmp_path / "faulty_2.txt"
+    with open(out_path_2, "w") as f:
+        f.write("C,D\nX,01/01/2000,C,10.0\n")
+    with subtests.test("Test ledger load file with faulty entry"):
+        with pytest.raises(ValueError, match="Unknown Entry type while reading file. 'X,01/01/2000,C,10.0'"):
+            _ = Ledger(out_path_2)
+
 
 def test_ledger_save_to_file(tmp_path: Path) -> None:
     TARGET_FILE_CONTENT = """A,B
 E,01/01/2000,A,10.0,Stuff,A:0.5,B:0.5
 E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
 """
-    ledger = Ledger(members=["A", "B"])
+    out_path = tmp_path / "out.txt"
+    ledger = Ledger(file_path=out_path, members=["A", "B"])
     ledger.add_expense(
         Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}, concept="Stuff", date=GENERIC_DATE)
     )
@@ -102,8 +134,7 @@ E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
         Expense(payer="B", quantity=20.0, assignment={"A": 1, "B": 1}, concept="More stuff", date=GENERIC_DATE)
     )
 
-    out_path = tmp_path / "out.txt"
-    ledger.save_ledger_to_file(out_path)
+    ledger.save_to_file()
     with open(out_path) as f:
         out_content = f.read()
 
@@ -116,7 +147,8 @@ E,01/01/2000,A,10.0,Stuff,A:0.5,B:0.5
 E,02/01/2000,B,20.0,More stuff,A:0.5,B:0.5
 E,03/01/2000,B,30.0,Even more stuff,A:0.5,B:0.5
 """
-    ledger = Ledger(members=["A", "B"])
+    out_path = tmp_path / "out.txt"
+    ledger = Ledger(file_path=out_path, members=["A", "B"])
     ledger.add_expense(
         Expense(payer="B", quantity=30.0, assignment={"A": 1, "B": 1}, concept="Even more stuff", date=date(2000, 1, 3))
     )
@@ -127,15 +159,14 @@ E,03/01/2000,B,30.0,Even more stuff,A:0.5,B:0.5
         Expense(payer="B", quantity=20.0, assignment={"A": 1, "B": 1}, concept="More stuff", date=date(2000, 1, 2))
     )
 
-    out_path = tmp_path / "out.txt"
-    ledger.save_ledger_to_file(out_path)
+    ledger.save_to_file()
     with open(out_path) as f:
         out_content = f.read()
 
     assert out_content == TARGET_FILE_CONTENT
 
 
-def test_representation(subtests: pytest.Subtests) -> None:
+def test_representation(tmp_path: Path, subtests: pytest.Subtests) -> None:
     TARGET_REPR_NO_BALANCED = """Member\tTotal Expenses\tTotal Paid\tOwed
 * A\t15.0\t\t10.0\t\t5.0
 * B\t15.0\t\t20.0\t\t-5.0
@@ -149,7 +180,8 @@ Transfers to settle:
 
 Expenses are balanced."""
 
-    ledger_0 = Ledger(members=["A", "B"])
+    out_path = tmp_path / "out.txt"
+    ledger_0 = Ledger(file_path=out_path, members=["A", "B"])
     ledger_0.add_expense(
         Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}, concept="Stuff", date=GENERIC_DATE)
     )
@@ -166,8 +198,9 @@ Expenses are balanced."""
         assert str(ledger_0) == TARGET_REPR_BALANCED
 
 
-def test_add_expense(subtests: pytest.Subtests) -> None:
-    ledger = Ledger(members=["A", "B"])
+def test_add_expense(tmp_path: Path, subtests: pytest.Subtests) -> None:
+    out_path = tmp_path / "out.txt"
+    ledger = Ledger(file_path=out_path, members=["A", "B"])
     ledger.add_expense(
         Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}, concept="Stuff", date=GENERIC_DATE)
     )
@@ -216,8 +249,9 @@ def test_add_expense(subtests: pytest.Subtests) -> None:
             )
 
 
-def test_add_transfer(subtests: pytest.Subtests) -> None:
-    ledger = Ledger(members=["A", "B"])
+def test_add_transfer(tmp_path: Path, subtests: pytest.Subtests) -> None:
+    out_path = tmp_path / "out.txt"
+    ledger = Ledger(file_path=out_path, members=["A", "B"])
     ledger.add_expense(
         Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}, concept="Stuff", date=GENERIC_DATE)
     )
@@ -252,8 +286,8 @@ def test_add_transfer(subtests: pytest.Subtests) -> None:
             ledger.add_transfer(Transfer(payer="A", quantity=5.0, recipient="C", date=GENERIC_DATE))
 
 
-def test_calculate_balance(subtests: pytest.Subtests) -> None:
-    ledger_0 = Ledger(members=["A", "B"])
+def test_calculate_balance(tmp_path: Path, subtests: pytest.Subtests) -> None:
+    ledger_0 = Ledger(file_path=tmp_path / "out_0.txt", members=["A", "B"])
     ledger_0.add_expense(
         Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}, concept="Stuff", date=GENERIC_DATE)
     )
@@ -265,7 +299,7 @@ def test_calculate_balance(subtests: pytest.Subtests) -> None:
     with subtests.test("Calculate balance with two members"):
         assert ledger_0.calculate_balance() == TARGET_TRANSFERS_0
 
-    ledger_1 = Ledger(members=["A", "B", "C", "D"])
+    ledger_1 = Ledger(tmp_path / "out_1.txt", members=["A", "B", "C", "D"])
     ledger_1.add_expense(
         Expense(payer="A", quantity=12.0, assignment={"A": 1, "C": 1, "D": 1}, concept="Stuff", date=GENERIC_DATE)
     )
@@ -280,7 +314,7 @@ def test_calculate_balance(subtests: pytest.Subtests) -> None:
     with subtests.test("Calculate balance with 4 members and 3 transfers"):
         assert sorted(ledger_1.calculate_balance(), key=lambda t: t.quantity) == TARGET_TRANSFERS_1
 
-    ledger_2 = Ledger(members=["A", "B", "C", "D"])
+    ledger_2 = Ledger(tmp_path / "out_2.txt", members=["A", "B", "C", "D"])
     ledger_2.add_expense(
         Expense(
             payer="A", quantity=12.0, assignment={"A": 1, "B": 1, "C": 1, "D": 1}, concept="Stuff", date=GENERIC_DATE
