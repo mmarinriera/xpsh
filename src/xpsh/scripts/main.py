@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 COLOR_PALETTE = ["deep_sky_blue2", "purple", "orange_red1", "yellow", "pink"]
 COLOR_OWES = "red"
 COLOR_IS_OWED = "green"
+COLOR_TRANSFER_TYPE = "cyan"
 
 
 class AssignmentDictRenderer:
@@ -33,9 +34,7 @@ class AssignmentDictRenderer:
         for name, fraction in self.assignment.items():
             color = self.name_color_map[name]
             text_elements.append(
-                Text(": ").join(
-                    [Text(name, style=f"bold {color}"), Text(f"{100 * fraction:.2f}%", style=f"italic {color}")]
-                )
+                Text(": ").join([Text(name, style=color), Text(f"{100 * fraction:.2f}%", style=f"italic {color}")])
             )
         return Text(", ").join(text_elements)
 
@@ -52,8 +51,12 @@ def _pretty_print_balance(ledger: Ledger) -> None:
 
     for name, account in ledger.accounts.items():
         color_owed = COLOR_OWES if account.owed > 0 else COLOR_IS_OWED
-        owed = Text(f"{account.owed}", style=color_owed)
-        balance.add_row(Text(name, style=name_color_map[name]), str(account.spent), str(account.paid), owed)
+        balance.add_row(
+            Text(name, style=name_color_map[name]),
+            Text(f"{account.spent}"),
+            Text(f"{account.paid}"),
+            Text(f"{account.owed}", style=color_owed),
+        )
 
     console = Console()
     console.print(balance)
@@ -71,7 +74,7 @@ def _pretty_print_balance(ledger: Ledger) -> None:
         settle.add_row(
             Text(transfer.payer, style=name_color_map[transfer.payer]),
             Text(transfer.recipient, style=name_color_map[transfer.recipient]),
-            str(transfer.quantity),
+            Text(f"{transfer.quantity}"),
         )
 
     console.print(settle)
@@ -92,14 +95,14 @@ def _pretty_print_entries(ledger: Ledger, n_last_entries: int | None) -> None:
     entry_table.add_column("Date", justify="right")
     entry_table.add_column("Paid by", justify="right")
     entry_table.add_column("Quantity", justify="right")
-    entry_table.add_column("Assignment / Recipient", justify="right")
+    entry_table.add_column("Assignment / Recipient", justify="left")
 
     for entry in entries:
         if isinstance(entry, Expense):
-            entry_type = "[magenta]Expense[/magenta]"
+            entry_type = Text("Expense")
             assignment = AssignmentDictRenderer(entry.assignment, name_color_map)
         elif isinstance(entry, Transfer):
-            entry_type = "[cyan]Transfer[/cyan]"
+            entry_type = Text("Transfer", style=COLOR_TRANSFER_TYPE)
             assignment = Text(entry.recipient, style=name_color_map[entry.recipient])
         else:
             raise ValueError(f"Unknown entry type (should never happen). {entry}.")
@@ -108,7 +111,7 @@ def _pretty_print_entries(ledger: Ledger, n_last_entries: int | None) -> None:
             entry_type,
             entry.date.strftime(DATE_OUT_FMT),
             Text(entry.payer, style=name_color_map[entry.payer]),
-            str(entry.quantity),
+            Text(f"{entry.quantity}"),
             assignment,
         )
 
