@@ -16,7 +16,9 @@ from xpsh.ledger import Transfer
 
 logger = logging.getLogger(__name__)
 
-COLOR_PALETTE = ["purple", "yellow", "green", "red"]
+COLOR_PALETTE = ["deep_sky_blue2", "purple", "orange_red1", "yellow", "pink"]
+COLOR_OWES = "red"
+COLOR_IS_OWED = "green"
 
 
 class AssignmentDictRenderer:
@@ -49,9 +51,9 @@ def _pretty_print_balance(ledger: Ledger) -> None:
     balance.add_column("Owed", justify="right", style="magenta")
 
     for name, account in ledger.accounts.items():
-        balance.add_row(
-            Text(name, style=name_color_map[name]), str(account.spent), str(account.paid), str(account.owed)
-        )
+        color_owed = COLOR_OWES if account.owed > 0 else COLOR_IS_OWED
+        owed = Text(f"{account.owed}", style=color_owed)
+        balance.add_row(Text(name, style=name_color_map[name]), str(account.spent), str(account.paid), owed)
 
     console = Console()
     console.print(balance)
