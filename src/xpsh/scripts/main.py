@@ -1,4 +1,5 @@
 import datetime
+import itertools
 import logging
 from pathlib import Path
 from typing import Any
@@ -39,9 +40,12 @@ class AssignmentDictRenderer:
         return Text(", ").join(text_elements)
 
 
+def _build_name_color_map(members: list[str]) -> dict[str, str]:
+    return dict(zip(members, itertools.cycle(COLOR_PALETTE)))
+
+
 def _pretty_print_balance(ledger: Ledger) -> None:
-    colors = COLOR_PALETTE[: len(ledger.members)]
-    name_color_map = dict(zip(ledger.members, colors))
+    name_color_map = _build_name_color_map(ledger.members)
 
     balance = Table(title="Balance", title_justify="left")
     balance.add_column("Member", justify="right", style="cyan", no_wrap=True)
@@ -87,8 +91,7 @@ def _pretty_print_entries(ledger: Ledger, n_last_entries: int | None) -> None:
     else:
         entries = ledger.entries
 
-    colors = COLOR_PALETTE[: len(ledger.members)]
-    name_color_map = dict(zip(ledger.members, colors))
+    name_color_map = _build_name_color_map(ledger.members)
 
     entry_table = Table(title="Entries", title_justify="left")
     entry_table.add_column("Type", justify="right")
