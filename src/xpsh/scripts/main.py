@@ -1,24 +1,52 @@
 import datetime
+import itertools
 import logging
 from pathlib import Path
 from typing import Any
 
 import click
 from rich.console import Console
-from rich.pretty import Pretty
 from rich.table import Table
+from rich.text import Text
 
 from xpsh import get_version
 from xpsh.ledger import DATE_OUT_FMT
 from xpsh.ledger import Expense
 from xpsh.ledger import Ledger
-from xpsh.ledger import LedgerEntry
 from xpsh.ledger import Transfer
 
 logger = logging.getLogger(__name__)
 
+COLOR_PALETTE = ["deep_sky_blue2", "purple", "orange_red1", "yellow", "pink"]
+COLOR_OWES = "red"
+COLOR_IS_OWED = "green"
+COLOR_TRANSFER_TYPE = "cyan"
+
+
+class AssignmentDictRenderer:
+    def __init__(self, assignment: dict[str, float], name_color_map: dict[str, str]):
+        if any(name not in name_color_map for name in assignment):
+            raise ValueError(f"Name color map does not match assignment names. {assignment}")
+        self.assignment = assignment
+        self.name_color_map = name_color_map
+
+    def __rich__(self) -> Text:
+        text_elements = []
+        for name, fraction in self.assignment.items():
+            color = self.name_color_map[name]
+            text_elements.append(
+                Text(": ").join([Text(name, style=color), Text(f"{100 * fraction:.2f}%", style=f"italic {color}")])
+            )
+        return Text(", ").join(text_elements)
+
+
+def _build_name_color_map(members: list[str]) -> dict[str, str]:
+    return dict(zip(members, itertools.cycle(COLOR_PALETTE)))
+
 
 def _pretty_print_balance(ledger: Ledger) -> None:
+    name_color_map = _build_name_color_map(ledger.members)
+
     balance = Table(title="Balance", title_justify="left")
     balance.add_column("Member", justify="right", style="cyan", no_wrap=True)
     balance.add_column("Total spent", justify="right")
@@ -26,7 +54,13 @@ def _pretty_print_balance(ledger: Ledger) -> None:
     balance.add_column("Owed", justify="right", style="magenta")
 
     for name, account in ledger.accounts.items():
-        balance.add_row(name, str(account.spent), str(account.paid), str(account.owed))
+        color_owed = COLOR_OWES if account.owed > 0 else COLOR_IS_OWED
+        balance.add_row(
+            Text(name, style=name_color_map[name]),
+            Text(f"{account.spent}"),
+            Text(f"{account.paid}"),
+            Text(f"{account.owed}", style=color_owed),
+        )
 
     console = Console()
     console.print(balance)
@@ -41,30 +75,48 @@ def _pretty_print_balance(ledger: Ledger) -> None:
         return
 
     for transfer in ledger.settle_transfers:
-        settle.add_row(transfer.payer, transfer.recipient, str(transfer.quantity))
+        settle.add_row(
+            Text(transfer.payer, style=name_color_map[transfer.payer]),
+            Text(transfer.recipient, style=name_color_map[transfer.recipient]),
+            Text(f"{transfer.quantity}"),
+        )
 
     console.print(settle)
 
 
-def _pretty_print_entries(entries: list[LedgerEntry]) -> None:
+def _pretty_print_entries(ledger: Ledger, n_last_entries: int | None) -> None:
+
+    if n_last_entries is not None and n_last_entries < len(ledger.entries):
+        entries = ledger.entries[:-n_last_entries]
+    else:
+        entries = ledger.entries
+
+    name_color_map = _build_name_color_map(ledger.members)
+
     entry_table = Table(title="Entries", title_justify="left")
     entry_table.add_column("Type", justify="right")
     entry_table.add_column("Date", justify="right")
     entry_table.add_column("Paid by", justify="right")
     entry_table.add_column("Quantity", justify="right")
-    entry_table.add_column("Assignment", justify="right")
+    entry_table.add_column("Assignment / Recipient", justify="left")
 
     for entry in entries:
         if isinstance(entry, Expense):
-            entry_type = "Expense"
-            assignment = Pretty(entry.assignment)
+            entry_type = Text("Expense")
+            assignment = AssignmentDictRenderer(entry.assignment, name_color_map)
         elif isinstance(entry, Transfer):
-            entry_type = "Transfer"
-            assignment = entry.recipient
+            entry_type = Text("Transfer", style=COLOR_TRANSFER_TYPE)
+            assignment = Text(entry.recipient, style=name_color_map[entry.recipient])
         else:
             raise ValueError(f"Unknown entry type (should never happen). {entry}.")
 
-        entry_table.add_row(entry_type, entry.date.strftime(DATE_OUT_FMT), entry.payer, str(entry.quantity), assignment)
+        entry_table.add_row(
+            entry_type,
+            entry.date.strftime(DATE_OUT_FMT),
+            Text(entry.payer, style=name_color_map[entry.payer]),
+            Text(f"{entry.quantity}"),
+            assignment,
+        )
 
     console = Console()
     console.print(entry_table)
@@ -121,12 +173,7 @@ def expenses(file_path: Path, n_last_entries: int | None) -> None:
     ledger = Ledger.from_file(file_path)
     logger.info("Ledger loaded from file")
 
-    if n_last_entries is not None and n_last_entries < len(ledger.entries):
-        entries = ledger.entries[:-n_last_entries]
-    else:
-        entries = ledger.entries
-
-    _pretty_print_entries(entries)
+    _pretty_print_entries(ledger, n_last_entries)
 
 
 @xpsh.command
