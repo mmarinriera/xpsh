@@ -16,6 +16,8 @@ from xpsh.ledger import Transfer
 
 logger = logging.getLogger(__name__)
 
+COLOR_PALETTE = ["purple", "yellow", "green", "red"]
+
 
 class AssignmentDictRenderer:
     def __init__(self, assignment: dict[str, float], name_color_map: dict[str, str]):
@@ -37,6 +39,9 @@ class AssignmentDictRenderer:
 
 
 def _pretty_print_balance(ledger: Ledger) -> None:
+    colors = COLOR_PALETTE[: len(ledger.members)]
+    name_color_map = dict(zip(ledger.members, colors))
+
     balance = Table(title="Balance", title_justify="left")
     balance.add_column("Member", justify="right", style="cyan", no_wrap=True)
     balance.add_column("Total spent", justify="right")
@@ -44,7 +49,9 @@ def _pretty_print_balance(ledger: Ledger) -> None:
     balance.add_column("Owed", justify="right", style="magenta")
 
     for name, account in ledger.accounts.items():
-        balance.add_row(name, str(account.spent), str(account.paid), str(account.owed))
+        balance.add_row(
+            Text(name, style=name_color_map[name]), str(account.spent), str(account.paid), str(account.owed)
+        )
 
     console = Console()
     console.print(balance)
@@ -59,12 +66,13 @@ def _pretty_print_balance(ledger: Ledger) -> None:
         return
 
     for transfer in ledger.settle_transfers:
-        settle.add_row(transfer.payer, transfer.recipient, str(transfer.quantity))
+        settle.add_row(
+            Text(transfer.payer, style=name_color_map[transfer.payer]),
+            Text(transfer.recipient, style=name_color_map[transfer.recipient]),
+            str(transfer.quantity),
+        )
 
     console.print(settle)
-
-
-COLOR_PALETTE = ["purple", "yellow", "green", "red"]
 
 
 def _pretty_print_entries(ledger: Ledger, n_last_entries: int | None) -> None:
