@@ -23,8 +23,8 @@ COLOR_IS_OWED = "green"
 
 class AssignmentDictRenderer:
     def __init__(self, assignment: dict[str, float], name_color_map: dict[str, str]):
-        if any(name not in assignment for name in name_color_map):
-            raise ValueError(f"Name color map does not match assignment names. {name_color_map}")
+        if any(name not in name_color_map for name in assignment):
+            raise ValueError(f"Name color map does not match assignment names. {assignment}")
         self.assignment = assignment
         self.name_color_map = name_color_map
 
