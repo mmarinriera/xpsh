@@ -17,7 +17,7 @@ from xpsh.ledger import Transfer
 
 logger = logging.getLogger(__name__)
 
-COLOR_PALETTE = ["deep_sky_blue2", "purple", "orange_red1", "yellow", "pink"]
+COLOR_PALETTE = ["deep_sky_blue2", "purple", "yellow", "orange_red1", "dark_cyan", "pink"]
 COLOR_OWES = "red"
 COLOR_IS_OWED = "green"
 COLOR_TRANSFER_TYPE = "cyan"
