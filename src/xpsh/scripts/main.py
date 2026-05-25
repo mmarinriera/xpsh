@@ -165,7 +165,7 @@ def xpsh(ctx: click.Context, debug_mode: bool) -> None:
 @xpsh.command
 @click.argument("file_path", type=click.Path(exists=True, resolve_path=True, path_type=Path))
 def balance(file_path: Path) -> None:
-    ledger = Ledger.from_file(file_path)
+    ledger = Ledger(file_path=file_path)
     logger.info("Ledger loaded from file")
     _pretty_print_balance(ledger)
 
@@ -174,7 +174,7 @@ def balance(file_path: Path) -> None:
 @click.argument("file_path", type=click.Path(exists=True, resolve_path=True, path_type=Path))
 @click.option("-n", "--n-last-entries", "n_last_entries", default=None, type=int, help="Show N most recent expenses.")
 def expenses(file_path: Path, n_last_entries: int | None) -> None:
-    ledger = Ledger.from_file(file_path)
+    ledger = Ledger(file_path=file_path)
     logger.info("Ledger loaded from file")
 
     _pretty_print_entries(ledger, n_last_entries)
@@ -211,7 +211,7 @@ def add_expense(
     print_output: bool,
     no_save: bool,
 ) -> None:
-    ledger = Ledger.from_file(file_path)
+    ledger = Ledger(file_path=file_path)
     logger.info("Ledger loaded from file")
     if not assignment:
         assignment = [(n, 1) for n in ledger.members]
@@ -233,7 +233,7 @@ def add_expense(
     if no_save:
         return
 
-    ledger.save_ledger_to_file(file_path)
+    ledger.save_to_file()
     logger.info("Updated ledger saved to file.")
 
 
@@ -258,7 +258,7 @@ def add_transfer(
     print_output: bool,
     no_save: bool,
 ) -> None:
-    ledger = Ledger.from_file(file_path)
+    ledger = Ledger(file_path=file_path)
     logger.info("Ledger loaded from file")
 
     if date_str is not None:
@@ -275,5 +275,5 @@ def add_transfer(
     if no_save:
         return
 
-    ledger.save_ledger_to_file(file_path)
+    ledger.save_to_file()
     logger.info("Updated ledger saved to file.")
