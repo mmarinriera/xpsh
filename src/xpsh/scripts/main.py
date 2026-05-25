@@ -46,6 +46,7 @@ def _build_name_color_map(members: list[str]) -> dict[str, str]:
 
 
 def _pretty_print_balance(ledger: Ledger) -> None:
+    """Pretty print ledger balance in terminal using rich text."""
     name_color_map = _build_name_color_map(ledger.members)
 
     balance = Table(title="Balance", title_justify="left")
@@ -88,7 +89,7 @@ def _pretty_print_balance(ledger: Ledger) -> None:
 
 
 def _pretty_print_entries(ledger: Ledger, n_last_entries: int | None) -> None:
-
+    """Pretty print ledger entries in terminal using rich text."""
     if n_last_entries is not None and n_last_entries < len(ledger.entries):
         entries = ledger.entries[:-n_last_entries]
     else:
@@ -170,6 +171,14 @@ def xpsh(ctx: click.Context, debug_mode: bool) -> None:
 @click.argument("members", nargs=-1, type=str)
 @click.option("-f", "--force", "force", is_flag=True, help="Force overwriting of existing file in FILE_PATH.")
 def create(file_path: Path, members: list[str], force: bool) -> None:
+    """
+    Create new ledger.
+
+    FILE_PATH is a valid path where the ledger data will be saved.
+    If the file in FILE_PATH already exists, the program will not attempt to overwrite it and will abort, unless the -f/--force flag is passed.
+
+    MEMBERS is a sequence of strings of arbitrary length, indicating the member names that should be included in the ledger.
+    """
     if file_path.exists():
         if not force:
             logger.critical("Ledger file already exists. Aborting.")
@@ -185,6 +194,11 @@ def create(file_path: Path, members: list[str], force: bool) -> None:
 @xpsh.command
 @click.argument("file_path", type=click.Path(exists=True, resolve_path=True, path_type=Path))
 def balance(file_path: Path) -> None:
+    """
+    Calculate and display ledger balance.
+
+    FILE_PATH is the path to the ledger file to be loaded.
+    """
     ledger = Ledger(file_path=file_path)
     logger.info("Ledger loaded from file")
     _pretty_print_balance(ledger)
@@ -194,6 +208,11 @@ def balance(file_path: Path) -> None:
 @click.argument("file_path", type=click.Path(exists=True, resolve_path=True, path_type=Path))
 @click.option("-n", "--n-last-entries", "n_last_entries", default=None, type=int, help="Show N most recent expenses.")
 def expenses(file_path: Path, n_last_entries: int | None) -> None:
+    """
+    List and display ledger entries.
+
+    FILE_PATH is the path to the ledger file to be loaded.
+    """
     ledger = Ledger(file_path=file_path)
     logger.info("Ledger loaded from file")
 
@@ -231,6 +250,32 @@ def add_expense(
     print_output: bool,
     no_save: bool,
 ) -> None:
+    """
+    Add a new expense to a ledger.
+
+    FILE_PATH is the path to the ledger file to be loaded.
+
+    PAYER is the person that payed for the expense.
+
+    QUANTITY is the quantity payed.
+
+    CONCEPT is a short message to identify the expense (try to avoid including commas in the message).
+
+    Use -a/--assignment option (multiple times if needed) to define how the expense is split between members.
+    For example, if you want to split an expense 75%-25% between members "Zipi" and "Zape", pass the following:
+
+    >>> -a Zipi 0.75 -a Zape 0.25
+
+    Alternatively, the following would be equivalent and also valid (as long as the ratios between assignments stay the same):
+
+    >>> -a Zipi 3 -a Zape 1
+
+    >>> -a Zipi 75 -a Zape 25
+
+    If no assignment is specified, the expense if split equally among all members by default.
+
+    If not expense date is specified with -d/--date option, the current date is set by default.
+    """
     ledger = Ledger(file_path=file_path)
     logger.info("Ledger loaded from file")
     if not assignment:
@@ -278,6 +323,19 @@ def add_transfer(
     print_output: bool,
     no_save: bool,
 ) -> None:
+    """
+    Add a new transfer between members to a ledger.
+
+    FILE_PATH is the path to the ledger file to be loaded.
+
+    PAYER is the person that is making the transfer.
+
+    QUANTITY is the quantity payed.
+
+    RECIPIENT is the person receiving the transfer.
+
+    If not expense date is specified with -d/--date option, the current date is set by default.
+    """
     ledger = Ledger(file_path=file_path)
     logger.info("Ledger loaded from file")
 
