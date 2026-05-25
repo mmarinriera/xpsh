@@ -16,6 +16,7 @@ classifiers = [
 ]
 dependencies = [
   "click>=8.4",
+  "filelock>=3.29",
   "rich>=15",
 ]
 scripts.xpsh = "xpsh.scripts.main:xpsh"

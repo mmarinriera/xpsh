@@ -5,9 +5,12 @@ from dataclasses import field
 from pathlib import Path
 from typing import Protocol
 
+from filelock import FileLock
+
 logger = logging.getLogger(__name__)
 
 DATE_OUT_FMT = "%d/%m/%Y"
+LOCK_TIMEOUT_SECONDS = 10
 
 
 @dataclass
@@ -90,12 +93,14 @@ class Ledger:
     members: list[str] = field(default_factory=list)
     entries: list[LedgerEntry] = field(default_factory=list)
     accounts: dict[str, Account] = field(default_factory=dict)
+    _lock: FileLock = field(init=False)
 
     @property
     def settle_transfers(self) -> list[Transfer]:
         return self.calculate_balance()
 
     def __post_init__(self) -> None:
+        self._lock = FileLock(self.file_path.with_name(f".{self.file_path.name}.lock"), timeout=LOCK_TIMEOUT_SECONDS)
         if self.file_path.exists():
             self.load_data_from_file()
             return
@@ -106,7 +111,7 @@ class Ledger:
             self.accounts[name] = Account(name=name)
 
     def load_data_from_file(self) -> None:
-        with open(self.file_path) as f:
+        with self._lock, open(self.file_path) as f:
             header = next(f)
             self.members = header.strip().split(",")
             _member_list_sanity_check(self.members)
@@ -147,7 +152,7 @@ class Ledger:
 
     def save_to_file(self) -> None:
         self.entries = sorted(self.entries, key=lambda entry: entry.date)
-        with open(self.file_path, "w") as f:
+        with self._lock, open(self.file_path, "w") as f:
             f.write(",".join(self.members) + "\n")
             for entry in self.entries:
                 identifier = "E" if isinstance(entry, Expense) else "T"
