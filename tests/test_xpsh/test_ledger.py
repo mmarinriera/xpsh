@@ -311,7 +311,7 @@ def test_calculate_balance(tmp_path: Path, subtests: pytest.Subtests) -> None:
         Transfer("D", 12.0, "B"),
     ]
 
-    with subtests.test("Calculate balance with 4 members and 3 transfers"):
+    with subtests.test("Calculate balance with 4 members and 2 transfers"):
         assert sorted(ledger_1.calculate_balance(), key=lambda t: t.quantity) == TARGET_TRANSFERS_1
 
     ledger_2 = Ledger(tmp_path / "out_2.txt", members=["A", "B", "C", "D"])
@@ -337,3 +337,13 @@ def test_calculate_balance(tmp_path: Path, subtests: pytest.Subtests) -> None:
 
     with subtests.test("Calculate balance after adding transfers to ledger"):
         assert not ledger_2.calculate_balance()
+
+
+def test_calculate_balance_symmetric_accounts(tmp_path: Path) -> None:
+    ledger_0 = Ledger(file_path=tmp_path / "out_0.txt", members=["A", "B", "C", "D"])
+    ledger_0.add_expense(Expense("A", 20.0, "Stuff", {"D": 1}, date=GENERIC_DATE))
+    ledger_0.add_expense(Expense("B", 5.0, "More stuff", {"C": 1}, date=GENERIC_DATE))
+
+    TARGET_TRANSFERS_0 = [Transfer("D", 20, "A"), Transfer("C", 5, "B")]
+
+    assert ledger_0.calculate_balance() == TARGET_TRANSFERS_0
