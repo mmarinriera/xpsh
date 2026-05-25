@@ -24,8 +24,6 @@ Transfers to settle
 └──────┴────┴──────────┘
 """
 
-    example_file_path = Path(example_file_path)
-
     runner = CliRunner()
     result = runner.invoke(xpsh, ["balance", str(example_file_path)])
 
@@ -46,8 +44,6 @@ def test_expenses(example_file_path: Path, subtests: pytest.Subtests) -> None:
 └─────────┴────────────┴─────────┴──────────┴────────────┴────────────────────────┘
 """
 
-    example_file_path = Path(example_file_path)
-
     runner = CliRunner()
     result = runner.invoke(xpsh, ["expenses", str(example_file_path)])
 
@@ -64,8 +60,6 @@ E,01/01/2000,A,10.0,Stuff,A:0.5,B:0.5
 E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
 E,01/01/2000,A,25.0,Even more stuff,A:0.5,B:0.5
 """
-
-    example_file_path = Path(example_file_path)
 
     runner = CliRunner()
     result = runner.invoke(
@@ -90,8 +84,6 @@ E,01/01/2000,A,10.0,Stuff,A:0.5,B:0.5
 E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
 E,{current_date},A,25.0,Even more stuff,A:0.5,B:0.5
 """
-
-    example_file_path = Path(example_file_path)
 
     runner = CliRunner()
     result = runner.invoke(xpsh, ["add-expense", str(example_file_path), "A", "25", "Even more stuff"])
@@ -160,8 +152,6 @@ E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
 T,01/01/2000,A,5.0,B
 """
 
-    example_file_path = Path(example_file_path)
-
     runner = CliRunner()
     result = runner.invoke(xpsh, ["add-transfer", str(example_file_path), "A", "5", "B", "-d", "01/01/2000"])
 
@@ -182,8 +172,6 @@ E,01/01/2000,A,10.0,Stuff,A:0.5,B:0.5
 E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
 T,{current_date},A,5.0,B
 """
-
-    example_file_path = Path(example_file_path)
 
     runner = CliRunner()
     result = runner.invoke(xpsh, ["add-transfer", str(example_file_path), "A", "5", "B"])
