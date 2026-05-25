@@ -208,6 +208,7 @@ class Ledger:
         logger.debug(f"rem owed: {remaining_owed} / rem settle {remaining_to_settle}")
 
         while pointer_indebted < pointer_receiver:
+            logger.info(f"it p0 {sorted_accounts[pointer_indebted].name}, p1 {sorted_accounts[pointer_receiver].name}")
             # Check if we have moved through all the over indebted accounts
             if indebted_account.owed <= 0.0:
                 break
@@ -218,11 +219,21 @@ class Ledger:
                 )
                 settle_transfers.append(transfer)
 
+                logger.info(f"transfer {transfer}")
+
                 remaining_to_settle -= remaining_owed
 
                 pointer_indebted += 1
                 indebted_account = sorted_accounts[pointer_indebted]
                 remaining_owed = indebted_account.owed
+
+                if remaining_to_settle == 0.0:
+                    pointer_receiver -= 1
+                    receiver_account = sorted_accounts[pointer_receiver]
+                    remaining_to_settle = abs(receiver_account.owed)
+                logger.info(
+                    f"next p0 {sorted_accounts[pointer_indebted].name}, next p1 {sorted_accounts[pointer_receiver].name} rset {remaining_to_settle}, rowed {remaining_owed}"
+                )
 
             else:
                 transfer = Transfer(
@@ -230,10 +241,23 @@ class Ledger:
                 )
                 settle_transfers.append(transfer)
 
+                logger.info(f"transfer {transfer}")
+
                 remaining_owed -= remaining_to_settle
 
                 pointer_receiver -= 1
                 receiver_account = sorted_accounts[pointer_receiver]
                 remaining_to_settle = abs(receiver_account.owed)
+
+                if remaining_owed == 0.0:
+                    pointer_indebted += 1
+                    indebted_account = sorted_accounts[pointer_indebted]
+                    remaining_owed = indebted_account.owed
+
+                logger.info(
+                    f"next p0 {sorted_accounts[pointer_indebted].name}, next p1 {sorted_accounts[pointer_receiver].name} rset {remaining_to_settle}, rowed {remaining_owed}"
+                )
+
+        logger.info(f"settle: {settle_transfers}")
 
         return settle_transfers
