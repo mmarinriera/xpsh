@@ -218,8 +218,6 @@ class Ledger:
                 )
                 settle_transfers.append(transfer)
 
-                logger.info(f"transfer {transfer}")
-
                 remaining_to_settle -= remaining_owed
 
                 pointer_indebted += 1
@@ -236,8 +234,6 @@ class Ledger:
                     payer=indebted_account.name, quantity=remaining_to_settle, recipient=receiver_account.name
                 )
                 settle_transfers.append(transfer)
-
-                logger.info(f"transfer {transfer}")
 
                 remaining_owed -= remaining_to_settle
 
