@@ -70,11 +70,13 @@ def _pretty_print_balance(ledger: Ledger) -> None:
     settle.add_column("To", justify="right", style="cyan")
     settle.add_column("Quantity", justify="right", style="green")
 
-    if not ledger.settle_transfers:
+    settle_transfers = ledger.settle_transfers
+
+    if not settle_transfers:
         console.print("[bold green]The balance is settled![/bold green]")
         return
 
-    for transfer in ledger.settle_transfers:
+    for transfer in settle_transfers:
         settle.add_row(
             Text(transfer.payer, style=name_color_map[transfer.payer]),
             Text(transfer.recipient, style=name_color_map[transfer.recipient]),

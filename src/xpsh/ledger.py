@@ -224,6 +224,11 @@ class Ledger:
                 indebted_account = sorted_accounts[pointer_indebted]
                 remaining_owed = indebted_account.owed
 
+                if remaining_to_settle == 0.0:
+                    pointer_receiver -= 1
+                    receiver_account = sorted_accounts[pointer_receiver]
+                    remaining_to_settle = abs(receiver_account.owed)
+
             else:
                 transfer = Transfer(
                     payer=indebted_account.name, quantity=remaining_to_settle, recipient=receiver_account.name
