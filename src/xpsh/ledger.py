@@ -93,6 +93,7 @@ class Ledger:
     members: list[str] = field(default_factory=list)
     entries: list[LedgerEntry] = field(default_factory=list)
     accounts: dict[str, Account] = field(default_factory=dict)
+    overwrite: bool = False
     _lock: FileLock = field(init=False)
 
     @property
@@ -101,7 +102,7 @@ class Ledger:
 
     def __post_init__(self) -> None:
         self._lock = FileLock(self.file_path.with_name(f".{self.file_path.name}.lock"), timeout=LOCK_TIMEOUT_SECONDS)
-        if self.file_path.exists():
+        if self.file_path.exists() and not self.overwrite:
             self.load_data_from_file()
             return
 

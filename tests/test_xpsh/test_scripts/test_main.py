@@ -8,6 +8,49 @@ from xpsh.ledger import DATE_OUT_FMT
 from xpsh.scripts.main import xpsh
 
 
+def test_create(tmp_path: Path, subtests: pytest.Subtests) -> None:
+    TARGET_FILE_CONTENT = "C,D\n"
+    out_path = tmp_path / "out.txt"
+
+    runner = CliRunner()
+    result = runner.invoke(xpsh, ["create", str(out_path), "C", "D"])
+    with subtests.test("Test cli create new ledger exitcode."):
+        assert result.exit_code == 0
+    with subtests.test("Test cli create new ledger file output."):
+        with open(out_path) as f:
+            file_content = f.read()
+        assert file_content == TARGET_FILE_CONTENT
+
+
+def test_create_existing_file(example_file_path: Path, subtests: pytest.Subtests) -> None:
+    TARGET_FILE_CONTENT = """A,B
+E,01/01/2000,A,10.0,Stuff,A:0.5,B:0.5
+E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
+"""
+
+    runner = CliRunner()
+    result = runner.invoke(xpsh, ["create", str(example_file_path), "C", "D"])
+    with subtests.test("Test cli create new ledger existing file exitcode."):
+        assert result.exit_code == 1
+    with subtests.test("Test cli create new ledger existing file contents."):
+        with open(example_file_path) as f:
+            file_content = f.read()
+        assert file_content == TARGET_FILE_CONTENT
+
+
+def test_create_existing_file_force(example_file_path: Path, subtests: pytest.Subtests) -> None:
+    TARGET_FILE_CONTENT = "C,D\n"
+
+    runner = CliRunner()
+    result = runner.invoke(xpsh, ["create", str(example_file_path), "C", "D", "--force"])
+    with subtests.test("Test cli create new ledger existing file force exitcode."):
+        assert result.exit_code == 0
+    with subtests.test("Test cli create new ledger existing file force file contents."):
+        with open(example_file_path) as f:
+            file_content = f.read()
+        assert file_content == TARGET_FILE_CONTENT
+
+
 def test_balance(example_file_path: Path, subtests: pytest.Subtests) -> None:
     TARGET_OUTPUT = """Balance                                     
 ┏━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━┓

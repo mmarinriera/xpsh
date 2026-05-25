@@ -71,6 +71,18 @@ def test_ledger_init(subtests: pytest.Subtests, tmp_path: Path) -> None:
         _ = Ledger(file_path=out_path, members=["A", "A"])
 
 
+def test_ledger_overwrite(tmp_path: Path, example_file_path: Path, subtests: pytest.Subtests) -> None:
+    out_path_new = tmp_path / "out.txt"
+    TARGET_MEMBERS = ["C", "D"]
+    ledger_0 = Ledger(file_path=out_path_new, members=["C", "D"], overwrite=True)
+    with subtests.test("Test ledger init overwrite: members"):
+        assert ledger_0.members == TARGET_MEMBERS
+
+    ledger_1 = Ledger(file_path=example_file_path, members=["C", "D"], overwrite=True)
+    with subtests.test("Test ledger init overwrite: members"):
+        assert ledger_1.members == TARGET_MEMBERS
+
+
 def test_ledger_load_from_file(example_file_path: Path, subtests: pytest.Subtests) -> None:
     TARGET_MEMBERS = ["A", "B"]
     TARGET_ACCOUNTS = {

@@ -1,6 +1,7 @@
 import datetime
 import itertools
 import logging
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -162,6 +163,23 @@ def xpsh(ctx: click.Context, debug_mode: bool) -> None:
         logger.setLevel(level=logging.DEBUG)
 
     ctx.obj["debug"] = debug_mode
+
+
+@xpsh.command
+@click.argument("file_path", type=click.Path(resolve_path=True, path_type=Path))
+@click.argument("members", nargs=-1, type=str)
+@click.option("-f", "--force", "force", is_flag=True, help="Force overwriting of existing file in FILE_PATH.")
+def create(file_path: Path, members: list[str], force: bool) -> None:
+    if file_path.exists():
+        if not force:
+            logger.critical("Ledger file already exists. Aborting.")
+            sys.exit(1)
+        else:
+            logger.info(f"Overwriting existing file in {file_path}")
+
+    ledger = Ledger(file_path=file_path, members=members, overwrite=force)
+    ledger.save_to_file()
+    logger.info("New ledger saved to file.")
 
 
 @xpsh.command
