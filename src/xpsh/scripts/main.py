@@ -175,9 +175,11 @@ def create(file_path: Path, members: list[str], force: bool) -> None:
     Create new ledger.
 
     FILE_PATH is a valid path where the ledger data will be saved.
-    If the file in FILE_PATH already exists, the program will not attempt to overwrite it and will abort, unless the -f/--force flag is passed.
+    If the file in FILE_PATH already exists, the program will not attempt to overwrite it and will abort,
+    unless the -f/--force flag is passed.
 
-    MEMBERS is a sequence of strings of arbitrary length, indicating the member names that should be included in the ledger.
+    MEMBERS is a sequence of strings of arbitrary length, indicating the member names that should be
+    included in the ledger.
     """
     if file_path.exists():
         if not force:
@@ -197,7 +199,7 @@ def balance(file_path: Path) -> None:
     """
     Calculate and display ledger balance.
 
-    Transfers required to balance the ledger are also displayed
+    Transfers required to balance the ledger are also displayed.
 
     FILE_PATH is the path to the ledger file to be loaded.
     """
@@ -268,7 +270,8 @@ def add_expense(
 
     >>> -a Zipi 0.75 -a Zape 0.25
 
-    Alternatively, the following would be equivalent and also valid (as long as the ratios between assignments stay the same):
+    Alternatively, the following would be equivalent and also valid
+    (as long as the ratios between assignments stay the same):
 
     >>> -a Zipi 3 -a Zape 1
 

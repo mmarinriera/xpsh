@@ -22,7 +22,8 @@ class Account:
         name(str): Account name.
         spent(float): Total quantity spent.
         paid(float): Total quantity paid.
-        owed(float): Quantity owed to other accounts, calculated as `spent` - `paid`. Negative values indicate that money is owed to the account.
+        owed(float): Quantity owed to other accounts, calculated as `spent` - `paid`.
+            Negative values indicate that money is owed to the account.
 
     """
 
@@ -154,8 +155,10 @@ class Ledger:
         entries(list[LedgerEntry]): Registry of ledger entries, both expenses of transfers.
         accounts(dict[str, Account]): Dictionary storing account data.
         settle_transfers(list[Transfer]): List of transfers required to balance the ledger.
-        overwrite(bool): If set to True, ledger is reset from the constructor and data stored in `file_path` will be overwritten.
-        _file_lock(Filelock): File lock used to prevent multiple Ledger instances reading/writing to the same file at once.
+        overwrite(bool): If set to True, ledger is reset from the constructor
+            and data stored in `file_path` will be overwritten.
+        _file_lock(Filelock): File lock used to prevent multiple Ledger instances reading/writing
+            to the same file at once.
 
     """
 
@@ -245,7 +248,8 @@ class Ledger:
             expense: Expense entry.
 
         Raises:
-            ValueError: If the expense payer, or any of the names in the expense assignment is not in the ledger members.
+            ValueError: If the expense payer, or any of the names in the expense assignment
+            is not in the ledger members.
 
         """
         if expense.payer not in self.members:
@@ -290,7 +294,8 @@ class Ledger:
         Calculate a set of transfers between member that will balance the ledger.
 
         Transfers are calculated by sorting the ledger accounts by amount owed in descending order
-        and settling accounts starting from the edges (most owed/indebted) and moving towards the center (least owed/indebted).
+        and settling accounts starting from the edges (most owed/indebted)and moving towards the center
+        (least owed/indebted).
 
         Returns:
             List of transfers that will balance the ledger.
