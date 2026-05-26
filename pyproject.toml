@@ -61,7 +61,7 @@ no_implicit_reexport = true
 
 [tool.pytest]
 minversion = "9.0"
-addopts = [ "-s" ]
+addopts = [ "-s", "-vvv" ]
 testpaths = [
   "tests",
 ]
