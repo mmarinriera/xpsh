@@ -18,6 +18,7 @@ dependencies = [
   "click>=8.4",
   "filelock>=3.29",
   "rich>=15",
+  "streamlit>=1.57",
 ]
 urls.Repository = "https://github.com/mmarinriera/xpsh"
 scripts.xpsh = "xpsh.scripts.main:xpsh"
