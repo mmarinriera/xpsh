@@ -197,6 +197,8 @@ def balance(file_path: Path) -> None:
     """
     Calculate and display ledger balance.
 
+    Transfers required to balance the ledger are also displayed
+
     FILE_PATH is the path to the ledger file to be loaded.
     """
     ledger = Ledger(file_path=file_path)

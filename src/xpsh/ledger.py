@@ -15,6 +15,17 @@ LOCK_TIMEOUT_SECONDS = 10
 
 @dataclass
 class Account:
+    """
+    Ledger member account.
+
+    Attributes:
+        name(str): Account name.
+        spent(float): Total quantity spent.
+        paid(float): Total quantity paid.
+        owed(float): Quantity owed to other accounts, calculated as `spent` - `paid`. Negative values indicate that money is owed to the account.
+
+    """
+
     name: str
     spent: float = 0.0
     paid: float = 0.0
@@ -30,11 +41,30 @@ class LedgerEntry(Protocol):
     date: datetime.date
 
     def to_output(self) -> str:
+        """
+        Formats entry data to be saved in an output file.
+
+        Returns:
+            Formatted entry data.
+
+        """
         raise NotImplementedError
 
 
 @dataclass
 class Expense:
+    """
+    Expense entry in the ledger.
+
+    Attributes:
+        payer(str): Account that payed for the expense.
+        quantity(float): Quantity payed.
+        concept(str): Short message to identify the expense.
+        assignment(dict[str,  float]): How the expense is split between different accounts.
+        date(datetime.date): Date of the expense.
+
+    """
+
     payer: str
     quantity: float
     concept: str
@@ -54,6 +84,13 @@ class Expense:
         return f"Expense | Payed on: {self.date.strftime(DATE_OUT_FMT)}, by: {self.payer}, quantity: {self.quantity}, for: {self.concept}. Assignment: {self.assignment}."
 
     def to_output(self) -> str:
+        """
+        Formats expense data to be saved in an output file.
+
+        Returns:
+            Formatted expense data.
+
+        """
         assignment_out = [f"{n}:{d}" for n, d in self.assignment.items()]
         concept_out = self.concept.replace(",", "")
         return ",".join(
@@ -63,6 +100,17 @@ class Expense:
 
 @dataclass
 class Transfer:
+    """
+    Transfer between two accounts.
+
+    Attributes:
+        payer(str): Account that payed for the expense.
+        quantity(float): Quantity payed.
+        recipient(str): Account that received the transfer.
+        date(datetime.date): Date of the expense.
+
+    """
+
     payer: str
     quantity: float
     recipient: str
@@ -76,10 +124,18 @@ class Transfer:
         return f"Transfer '{self.payer}' -> '{self.recipient}': {self.quantity}."
 
     def to_output(self) -> str:
+        """
+        Formats transfer data to be saved in an output file.
+
+        Returns:
+            Formatted transfer data.
+
+        """
         return ",".join([self.date.strftime(DATE_OUT_FMT), self.payer, str(self.quantity), self.recipient])
 
 
 def _member_list_sanity_check(members: list[str]) -> None:
+    """Ensures there's more than one member, and there's no duplicate names."""
     if len(members) <= 1:
         raise ValueError(f"Include at least two members. {members}")
 
@@ -89,6 +145,20 @@ def _member_list_sanity_check(members: list[str]) -> None:
 
 @dataclass
 class Ledger:
+    """
+    Stores expense and transfer data and calculates balance between accounts.
+
+    Attributes:
+        file_path(Path): Path to file where ledger data is stored.
+        members(list[str]): List of account names sharing the expenses.
+        entries(list[LedgerEntry]): Registry of ledger entries, both expenses of transfers.
+        accounts(dict[str, Account]): Dictionary storing account data.
+        settle_transfers(list[Transfer]): List of transfers required to balance the ledger.
+        overwrite(bool): If set to True, ledger is reset from the constructor and data stored in `file_path` will be overwritten.
+        _file_lock(Filelock): File lock used to prevent multiple Ledger instances reading/writing to the same file at once.
+
+    """
+
     file_path: Path
     members: list[str] = field(default_factory=list)
     entries: list[LedgerEntry] = field(default_factory=list)
@@ -112,6 +182,13 @@ class Ledger:
             self.accounts[name] = Account(name=name)
 
     def load_data_from_file(self) -> None:
+        """
+        Load ledger data from file.
+
+        Raises:
+            ValueError: If number of members is less than 2, or if any name is duplicated.
+
+        """
         with self._lock, open(self.file_path) as f:
             header = next(f)
             self.members = header.strip().split(",")
@@ -152,6 +229,7 @@ class Ledger:
         return out
 
     def save_to_file(self) -> None:
+        """Saves ledger data to file."""
         self.entries = sorted(self.entries, key=lambda entry: entry.date)
         with self._lock, open(self.file_path, "w") as f:
             f.write(",".join(self.members) + "\n")
@@ -160,6 +238,16 @@ class Ledger:
                 f.write(f"{identifier},{entry.to_output()}\n")
 
     def add_expense(self, expense: Expense) -> None:
+        """
+        Add expense to the ledger.
+
+        Args:
+            expense: Expense entry.
+
+        Raises:
+            ValueError: If the expense payer, or any of the names in the expense assignment is not in the ledger members.
+
+        """
         if expense.payer not in self.members:
             raise ValueError(f"Expense payer not in members. '{expense.payer}'")
         if any([m not in self.members for m in expense.assignment]):
@@ -175,6 +263,16 @@ class Ledger:
             account.spent += expense.quantity * fraction
 
     def add_transfer(self, transfer: Transfer) -> None:
+        """
+        Add transfer to the ledger.
+
+        Args:
+            transfer: Transfer entry.
+
+        Raises:
+            ValueError: If the transfer payer or recipient is not in the ledger members.
+
+        """
         if transfer.payer not in self.members:
             raise ValueError(f"Transfer payer not in members. '{transfer.payer}'")
         if transfer.recipient not in self.members:
@@ -189,9 +287,14 @@ class Ledger:
 
     def calculate_balance(self) -> list[Transfer]:
         """
-        Calculate who owes money to who.
+        Calculate a set of transfers between member that will balance the ledger.
 
-        Sorting the accounts by total amount owed, then assigning transfers between accounts prioritising largest transfers.
+        Transfers are calculated by sorting the ledger accounts by amount owed in descending order
+        and settling accounts starting from the edges (most owed/indebted) and moving towards the center (least owed/indebted).
+
+        Returns:
+            List of transfers that will balance the ledger.
+
         """
         sorted_accounts: list[Account] = sorted(self.accounts.values(), key=lambda a: a.owed, reverse=True)
         logger.debug(f"{dict({a.name: a.owed for a in sorted_accounts})}")
