@@ -33,7 +33,7 @@ dev = [
 packages.find.where = [ "src" ]
 
 [tool.uv]
-required-version = ">=0.10.0"
+required-version = ">=0.11.0"
 
 [tool.ruff]
 target-version = "py313"
@@ -61,7 +61,7 @@ no_implicit_reexport = true
 
 [tool.pytest]
 minversion = "9.0"
-addopts = [ "-s" ]
+addopts = [ "-s", "-vvv" ]
 testpaths = [
   "tests",
 ]
@@ -87,3 +87,16 @@ report.exclude_also = [
 ]
 report.ignore_errors = true
 html.directory = ".coverage_html_report"
+
+[tool.semantic_release]
+build_command = """
+    uv lock --upgrade-package "$PACKAGE_NAME"
+    git add uv.lock
+    uv build
+"""
+version_toml = [ "pyproject.toml:project.version" ]
+branch = "main"
+commit_message = "chore(release): version {version}"
+allow_zero_version = true
+changelog.default_templates.changelog_file = "CHANGELOG.md"
+publish.upload_to_vcs_release = false
