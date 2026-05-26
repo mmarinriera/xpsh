@@ -19,6 +19,7 @@ dependencies = [
   "filelock>=3.29",
   "rich>=15",
 ]
+urls.Repository = "https://github.com/mmarinriera/xpsh"
 scripts.xpsh = "xpsh.scripts.main:xpsh"
 
 [dependency-groups]
