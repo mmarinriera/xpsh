@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.3.5 (2026-05-27)
+
+### Bug Fixes
+
+- **app**: Run headless
+  ([`2d61288`](https://github.com/mmarinriera/xpsh/commit/2d61288456d376b17546fc792d14fb7668d7e777))
+
+
 ## v0.3.4 (2026-05-27)
 
 ### Bug Fixes
