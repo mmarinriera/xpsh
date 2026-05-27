@@ -22,6 +22,7 @@ dependencies = [
 ]
 urls.Repository = "https://github.com/mmarinriera/xpsh"
 scripts.xpsh = "xpsh.scripts.main:xpsh"
+scripts.xpsh-app = "xpsh.scripts.run_app:main"
 
 [dependency-groups]
 dev = [
