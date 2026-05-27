@@ -21,6 +21,3 @@ wheels/
 
 # tox
 .tox/
-
-# streamlit
-.streamlit
