@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.3.3 (2026-05-27)
+
+### Bug Fixes
+
+- **app**: Add entry point
+  ([`1a3082d`](https://github.com/mmarinriera/xpsh/commit/1a3082dc9ba282bcc26d7fa933ecb25c9ab83ed3))
+
+
 ## v0.3.2 (2026-05-27)
 
 ### Bug Fixes
