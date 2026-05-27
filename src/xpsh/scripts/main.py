@@ -1,5 +1,4 @@
 import datetime
-import itertools
 import logging
 import sys
 from pathlib import Path
@@ -16,12 +15,10 @@ from xpsh.ledger import Expense
 from xpsh.ledger import Ledger
 from xpsh.ledger import Transfer
 
-logger = logging.getLogger(__name__)
+from . import utils
 
+logger = logging.getLogger(__name__)
 COLOR_PALETTE = ["deep_sky_blue2", "purple", "yellow", "orange_red1", "dark_cyan", "pink"]
-COLOR_OWES = "red"
-COLOR_IS_OWED = "green"
-COLOR_TRANSFER_TYPE = "cyan"
 
 
 class AssignmentDictRenderer:
@@ -41,13 +38,9 @@ class AssignmentDictRenderer:
         return Text(", ").join(text_elements)
 
 
-def _build_name_color_map(members: list[str]) -> dict[str, str]:
-    return dict(zip(members, itertools.cycle(COLOR_PALETTE)))
-
-
 def _pretty_print_balance(ledger: Ledger) -> None:
     """Pretty print ledger balance in terminal using rich text."""
-    name_color_map = _build_name_color_map(ledger.members)
+    name_color_map = utils.build_member_color_map(ledger.members, COLOR_PALETTE)
 
     balance = Table(title="Balance", title_justify="left")
     balance.add_column("Member", justify="right", style="cyan", no_wrap=True)
@@ -56,7 +49,7 @@ def _pretty_print_balance(ledger: Ledger) -> None:
     balance.add_column("Owed", justify="right", style="magenta")
 
     for name, account in ledger.accounts.items():
-        color_owed = COLOR_OWES if account.owed > 0 else COLOR_IS_OWED
+        color_owed = utils.COLOR_OWES if account.owed > 0 else utils.COLOR_IS_OWED
         balance.add_row(
             Text(name, style=name_color_map[name]),
             Text(f"{account.spent:.2f}"),
@@ -95,7 +88,7 @@ def _pretty_print_entries(ledger: Ledger, n_last_entries: int | None) -> None:
     else:
         entries = ledger.entries
 
-    name_color_map = _build_name_color_map(ledger.members)
+    name_color_map = utils.build_member_color_map(ledger.members, COLOR_PALETTE)
 
     entry_table = Table(title="Entries", title_justify="left")
     entry_table.add_column("Type", justify="right")
@@ -111,7 +104,7 @@ def _pretty_print_entries(ledger: Ledger, n_last_entries: int | None) -> None:
             assignment = AssignmentDictRenderer(entry.assignment, name_color_map)
             concept = Text(entry.concept)
         elif isinstance(entry, Transfer):
-            entry_type = Text("Transfer", style=COLOR_TRANSFER_TYPE)
+            entry_type = Text("Transfer", style=utils.COLOR_TRANSFER_TYPE)
             assignment = Text(entry.recipient, style=name_color_map[entry.recipient])
             concept = Text("-")
         else:
