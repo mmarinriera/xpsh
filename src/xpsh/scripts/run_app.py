@@ -7,7 +7,6 @@ APP_PATH = Path(__file__).with_name("app.py")
 
 def main() -> None:
     file_path = sys.argv[1]
-    print(f"{APP_PATH}: {file_path}")
     subprocess.run([sys.executable, "-m", "streamlit", "run", APP_PATH, file_path])
 
 
