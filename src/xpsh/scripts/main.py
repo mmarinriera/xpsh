@@ -5,10 +5,12 @@ from pathlib import Path
 from typing import Any
 
 import click
+from rich import print as rprint
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
+from xpsh import get_resource
 from xpsh import get_version
 from xpsh.ledger import DATE_OUT_FMT
 from xpsh.ledger import Expense
@@ -19,6 +21,13 @@ from . import utils
 
 logger = logging.getLogger(__name__)
 COLOR_PALETTE = ["deep_sky_blue2", "purple", "yellow", "orange_red1", "dark_cyan", "pink"]
+
+EXAMPLE_LEDGERS = {"turtles": "tmnt.xpsh", "fellowship": "lotr.xpsh", "teveo": "tbo.xpsh"}
+EXAMPLE_LEDGERS_DESCR = {
+    "turtles": "Everyday shared expenses from a group of flatmates in NY.",
+    "fellowship": "Shared expenses from a road trip through the country.",
+    "teveo": "Shared expenses between a pair of twins.",
+}
 
 
 class AssignmentDictRenderer:
@@ -123,6 +132,16 @@ def _pretty_print_entries(ledger: Ledger, n_last_entries: int | None) -> None:
     console.print(entry_table)
 
 
+def _resolve_input_path(input_str: str, exist_only: bool = True) -> Path:
+    if input_str not in EXAMPLE_LEDGERS:
+        input_path = Path(input_str)
+        if not input_path.exists() and exist_only:
+            logger.critical("Input file path doesn't exist. Aborting.")
+            sys.exit(1)
+        return input_path
+    return get_resource(EXAMPLE_LEDGERS[input_str])
+
+
 def print_version(ctx: click.Context, _: Any, value: Any) -> None:
     """Click print version."""
     if not value or ctx.resilient_parsing:
@@ -160,10 +179,10 @@ def xpsh(ctx: click.Context, debug_mode: bool) -> None:
 
 
 @xpsh.command
-@click.argument("file_path", type=click.Path(resolve_path=True, path_type=Path))
+@click.argument("file_path", type=str)
 @click.argument("members", nargs=-1, type=str)
 @click.option("-f", "--force", "force", is_flag=True, help="Force overwriting of existing file in FILE_PATH.")
-def create(file_path: Path, members: list[str], force: bool) -> None:
+def create(file_path: str, members: list[str], force: bool) -> None:
     """
     Create new ledger.
 
@@ -174,50 +193,77 @@ def create(file_path: Path, members: list[str], force: bool) -> None:
     MEMBERS is a sequence of strings of arbitrary length, indicating the member names that should be
     included in the ledger.
     """
-    if file_path.exists():
+    resolved_path = _resolve_input_path(file_path, exist_only=False)
+
+    if resolved_path.exists():
         if not force:
             logger.critical("Ledger file already exists. Aborting.")
             sys.exit(1)
         else:
             logger.info(f"Overwriting existing file in {file_path}")
 
-    ledger = Ledger(file_path=file_path, members=members, overwrite=force)
+    ledger = Ledger(file_path=resolved_path, members=members, overwrite=force)
     ledger.save_to_file()
     logger.info("New ledger saved to file.")
 
 
 @xpsh.command
-@click.argument("file_path", type=click.Path(exists=True, resolve_path=True, path_type=Path))
-def balance(file_path: Path) -> None:
+@click.argument("file_path", type=str)
+def balance(file_path: str) -> None:
     """
     Calculate and display ledger balance.
 
     Transfers required to balance the ledger are also displayed.
 
     FILE_PATH is the path to the ledger file to be loaded.
+
+    HINT: You can load one of the example ledgers by passing a keyword instead of FILE_PATH.
+
+    Run `xpsh examples` to check the available examples.
     """
-    ledger = Ledger(file_path=file_path)
+    resolved_path = _resolve_input_path(file_path)
+    ledger = Ledger(file_path=resolved_path)
     logger.info("Ledger loaded from file")
     _pretty_print_balance(ledger)
 
 
 @xpsh.command
-@click.argument("file_path", type=click.Path(exists=True, resolve_path=True, path_type=Path))
+@click.argument("file_path", type=str)
 @click.option("-n", "--n-last-entries", "n_last_entries", default=None, type=int, help="Show N most recent expenses.")
-def expenses(file_path: Path, n_last_entries: int | None) -> None:
+def expenses(file_path: str, n_last_entries: int | None) -> None:
     """
     List and display ledger entries.
 
     FILE_PATH is the path to the ledger file to be loaded.
+
+    HINT: You can load one of the example ledgers by passing a keyword instead of FILE_PATH.
+
+    Run `xpsh examples` to check the available examples.
+
     """
-    ledger = Ledger(file_path=file_path)
+    resolved_path = _resolve_input_path(file_path)
+    ledger = Ledger(file_path=resolved_path)
     logger.info("Ledger loaded from file")
 
     _pretty_print_entries(ledger, n_last_entries)
 
 
 @xpsh.command
-@click.argument("file_path", type=click.Path(exists=True, resolve_path=True, path_type=Path))
+def examples() -> None:
+    """Displays the keywords to load different example files using the other CLI commands."""
+    table = Table(title="Examples", title_justify="left", show_lines=True)
+    table.add_column("Keyword", justify="right")
+    table.add_column("Description", justify="right")
+    for kw, descr in EXAMPLE_LEDGERS_DESCR.items():
+        table.add_row(f"[bold cyan]{kw}[/bold cyan]", descr)
+
+    console = Console()
+    console.print(table)
+    rprint("e.g. run: [bold purple]xpsh balance fellowship[/bold purple]")
+
+
+@xpsh.command
+@click.argument("file_path", type=str)
 @click.argument("payer", type=str)
 @click.argument("quantity", type=float)
 @click.argument("concept", type=str)
@@ -238,7 +284,7 @@ def expenses(file_path: Path, n_last_entries: int | None) -> None:
 )
 @click.option("--no-save", "no_save", is_flag=True, help="Do not update the file with the new expense.")
 def add_expense(
-    file_path: Path,
+    file_path: str,
     payer: str,
     quantity: float,
     concept: str,
@@ -273,8 +319,14 @@ def add_expense(
     If no assignment is specified, the expense if split equally among all members by default.
 
     If not expense date is specified with -d/--date option, the current date is set by default.
+
+    HINT: You can load one of the example ledgers by passing a keyword instead of FILE_PATH.
+
+    Run `xpsh examples` to check the available examples.
+
     """
-    ledger = Ledger(file_path=file_path)
+    resolved_path = _resolve_input_path(file_path)
+    ledger = Ledger(file_path=resolved_path)
     logger.info("Ledger loaded from file")
     if not assignment:
         assignment = [(n, 1) for n in ledger.members]
@@ -301,7 +353,7 @@ def add_expense(
 
 
 @xpsh.command
-@click.argument("file_path", type=click.Path(exists=True, resolve_path=True, path_type=Path))
+@click.argument("file_path", type=str)
 @click.argument("payer", type=str)
 @click.argument("quantity", type=float)
 @click.argument("recipient")
@@ -313,7 +365,7 @@ def add_expense(
 )
 @click.option("--no-save", "no_save", is_flag=True, help="Do not update the file with the new expense.")
 def add_transfer(
-    file_path: Path,
+    file_path: str,
     payer: str,
     quantity: float,
     recipient: str,
@@ -333,8 +385,13 @@ def add_transfer(
     RECIPIENT is the person receiving the transfer.
 
     If not expense date is specified with -d/--date option, the current date is set by default.
+
+    HINT: You can load one of the example ledgers by passing a keyword instead of FILE_PATH.
+
+    Run `xpsh examples` to check the available examples.
     """
-    ledger = Ledger(file_path=file_path)
+    resolved_path = _resolve_input_path(file_path)
+    ledger = Ledger(file_path=resolved_path)
     logger.info("Ledger loaded from file")
 
     if date_str is not None:

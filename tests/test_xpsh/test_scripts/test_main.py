@@ -5,7 +5,29 @@ import pytest
 from click.testing import CliRunner
 
 from xpsh.ledger import DATE_OUT_FMT
+from xpsh.scripts.main import EXAMPLE_LEDGERS
+from xpsh.scripts.main import _resolve_input_path
 from xpsh.scripts.main import xpsh
+
+
+def test_resolve_input_path(tmp_path: Path, subtests: pytest.Subtests) -> None:
+    file_path_0 = tmp_path / "file_0.txt"
+    file_path_0.touch()
+    file_path_1 = tmp_path / "file_1.txt"
+
+    with subtests.test("Test resolve path existing file"):
+        assert _resolve_input_path(str(file_path_0)) == file_path_0
+
+    with subtests.test("Test resolve path non-existing file"), pytest.raises(SystemExit):
+        _resolve_input_path(str(file_path_1))
+
+    with subtests.test("Test resolve path non-existing file ok"):
+        assert _resolve_input_path(str(file_path_1), exist_only=False) == file_path_1
+
+
+def test_resolve_input_path_examples() -> None:
+    for kw in EXAMPLE_LEDGERS:
+        assert _resolve_input_path(kw).exists()
 
 
 def test_create(tmp_path: Path, subtests: pytest.Subtests) -> None:
@@ -95,6 +117,13 @@ def test_expenses(example_file_path: Path, subtests: pytest.Subtests) -> None:
 
     with subtests.test("Test cli balance console output"):
         assert result.output == TARGET_OUTPUT
+
+
+def test_examples(subtests: pytest.Subtests) -> None:
+    runner = CliRunner()
+    result = runner.invoke(xpsh, ["examples"])
+    with subtests.test("Test cli examples exitcode."):
+        assert result.exit_code == 0
 
 
 def test_add_expense(example_file_path: Path, subtests: pytest.Subtests) -> None:
