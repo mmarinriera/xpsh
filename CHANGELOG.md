@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.3.2 (2026-05-27)
+
+### Bug Fixes
+
+- **app**: Colors
+  ([`a74f4f6`](https://github.com/mmarinriera/xpsh/commit/a74f4f6bc3872662c6229d4b2ebfef736f38563e))
+
+
 ## v0.3.1 (2026-05-27)
 
 ### Bug Fixes
