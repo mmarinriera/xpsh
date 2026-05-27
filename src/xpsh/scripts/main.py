@@ -59,9 +59,9 @@ def _pretty_print_balance(ledger: Ledger) -> None:
         color_owed = COLOR_OWES if account.owed > 0 else COLOR_IS_OWED
         balance.add_row(
             Text(name, style=name_color_map[name]),
-            Text(f"{account.spent}"),
-            Text(f"{account.paid}"),
-            Text(f"{account.owed}", style=color_owed),
+            Text(f"{account.spent:.2f}"),
+            Text(f"{account.paid:.2f}"),
+            Text(f"{account.owed:.2f}", style=color_owed),
         )
 
     console = Console()
@@ -82,7 +82,7 @@ def _pretty_print_balance(ledger: Ledger) -> None:
         settle.add_row(
             Text(transfer.payer, style=name_color_map[transfer.payer]),
             Text(transfer.recipient, style=name_color_map[transfer.recipient]),
-            Text(f"{transfer.quantity}"),
+            Text(f"{transfer.quantity:.2f}"),
         )
 
     console.print(settle)
@@ -121,7 +121,7 @@ def _pretty_print_entries(ledger: Ledger, n_last_entries: int | None) -> None:
             entry_type,
             entry.date.strftime(DATE_OUT_FMT),
             Text(entry.payer, style=name_color_map[entry.payer]),
-            Text(f"{entry.quantity}"),
+            Text(f"{entry.quantity:.2f}"),
             concept,
             assignment,
         )
