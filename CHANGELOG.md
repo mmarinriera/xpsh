@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.3.1 (2026-05-27)
+
+### Bug Fixes
+
+- **cli**: Colors
+  ([`735570f`](https://github.com/mmarinriera/xpsh/commit/735570f0eed8ca1699eae22f11964a0f4ac71074))
+
+
 ## v0.3.0 (2026-05-27)
 
 ### Features
