@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.3.0 (2026-05-27)
+
+### Features
+
+- **cli**: Add access to example ledgers ([#8](https://github.com/mmarinriera/xpsh/pull/8),
+  [`ecb7a27`](https://github.com/mmarinriera/xpsh/commit/ecb7a27976bfdc976047919d491c0c3a73cddcc0))
+
+
 ## v0.2.0 (2026-05-27)
 
 ### Features
