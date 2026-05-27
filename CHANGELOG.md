@@ -2,6 +2,18 @@
 
 <!-- version list -->
 
+## v0.2.0 (2026-05-27)
+
+### Features
+
+- Local webapp / browser GUI ([#7](https://github.com/mmarinriera/xpsh/pull/7),
+  [`c418d4e`](https://github.com/mmarinriera/xpsh/commit/c418d4e8b6a2d454619380a9bcf7e0f6cdb5dff1))
+
+- **app**: Simple graphical interface using streamlit
+  ([#7](https://github.com/mmarinriera/xpsh/pull/7),
+  [`c418d4e`](https://github.com/mmarinriera/xpsh/commit/c418d4e8b6a2d454619380a9bcf7e0f6cdb5dff1))
+
+
 ## v0.1.1 (2026-05-27)
 
 ### Bug Fixes

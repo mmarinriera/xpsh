@@ -1018,7 +1018,7 @@ wheels = [
 
 [[package]]
 name = "xpsh"
-version = "0.1.1"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -1039,7 +1039,7 @@ requires-dist = [
     { name = "click", specifier = ">=8.4" },
     { name = "filelock", specifier = ">=3.29" },
     { name = "rich", specifier = ">=15" },
-    { name = "streamlit", specifier = ">=1.57.0" },
+    { name = "streamlit", specifier = ">=1.57" },
 ]
 
 [package.metadata.requires-dev]
