@@ -18,6 +18,7 @@ from xpsh.ledger import Transfer
 from . import utils
 
 logger = logging.getLogger(__name__)
+COLOR_PALETTE = ["deep_sky_blue2", "purple", "yellow", "orange_red1", "dark_cyan", "pink"]
 
 
 class AssignmentDictRenderer:
@@ -39,7 +40,7 @@ class AssignmentDictRenderer:
 
 def _pretty_print_balance(ledger: Ledger) -> None:
     """Pretty print ledger balance in terminal using rich text."""
-    name_color_map = utils.build_member_color_map(ledger.members)
+    name_color_map = utils.build_member_color_map(ledger.members, COLOR_PALETTE)
 
     balance = Table(title="Balance", title_justify="left")
     balance.add_column("Member", justify="right", style="cyan", no_wrap=True)
@@ -87,7 +88,7 @@ def _pretty_print_entries(ledger: Ledger, n_last_entries: int | None) -> None:
     else:
         entries = ledger.entries
 
-    name_color_map = utils.build_member_color_map(ledger.members)
+    name_color_map = utils.build_member_color_map(ledger.members, COLOR_PALETTE)
 
     entry_table = Table(title="Entries", title_justify="left")
     entry_table.add_column("Type", justify="right")

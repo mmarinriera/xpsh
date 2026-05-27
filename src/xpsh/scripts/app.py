@@ -2,15 +2,16 @@ import datetime
 import sys
 from pathlib import Path
 
-import pandas as pd
 import streamlit as st
 
 from xpsh.ledger import Expense
 from xpsh.ledger import Ledger
 from xpsh.ledger import LedgerEntry
 from xpsh.ledger import Transfer
+from xpsh.scripts import utils
 
 DATE_FMT = "%d/%m/%Y"
+COLOR_PALETTE = ["#295bff", "#cb11ff", "#ffee00", "#fa6d1b", "#26f0ff", "#fd6bf1"]
 
 
 def _submit_expense(ledger: Ledger) -> None:
@@ -58,51 +59,75 @@ def _submit_transfer(ledger: Ledger) -> None:
         st.success("Transfer added!")
 
 
-def _format_assignment(entry: LedgerEntry) -> str:
+def _format_member_name(name: str, color_map: dict[str, str]) -> str:
+    color = color_map[name]
+    return f":color[**{name}**]{{foreground='{color}'}}"
+
+
+def _format_assignment(entry: LedgerEntry, member_color_map: dict[str, str]) -> str:
     if isinstance(entry, Transfer):
-        return entry.recipient
+        return _format_member_name(entry.recipient, member_color_map)
     if isinstance(entry, Expense):
         assignments_str = []
         for name, fraction in entry.assignment.items():
-            assignments_str.append(f"{name}={100 * fraction:.2f}%")
+            color = member_color_map[name]
+            assignments_str.append(
+                f":color[**{name}**={100 * fraction:.2f}%]{{foreground='{color}'}}"
+            )  # f"{_format_member_name(name,member_color_map)}={100*fraction:.2f}%")
         return ", ".join(assignments_str)
     raise ValueError(f"Unknown entry type: {entry}")
 
 
 def _show_last_entries(ledger: Ledger, n_last_entries: int = 10) -> None:
     entries = ledger.entries[:-n_last_entries] if len(ledger.entries) > n_last_entries else ledger.entries
+    member_color_map = utils.build_member_color_map(ledger.members, COLOR_PALETTE)
     records = []
-    for entry in entries:
-        date = entry.date.strftime(DATE_FMT)
-        payer = entry.payer
-        quantity = f"{entry.quantity}"
-        concept = entry.concept if isinstance(entry, Expense) else "Transfer"
-        assignment = _format_assignment(entry)
+    date = []
+    payer = []
+    quantity = []
+    concept = []
+    assignment = []
+    for entry in entries[::-1]:
+        date.append(entry.date.strftime(DATE_FMT))
+        payer.append(_format_member_name(entry.payer, member_color_map))
+        quantity.append(f"{entry.quantity}")
+        concept.append(entry.concept if isinstance(entry, Expense) else f":{utils.COLOR_TRANSFER_TYPE}[Transfer]")
+        assignment.append(_format_assignment(entry, member_color_map))
         records.append((date, payer, quantity, concept, assignment))
-    columns = ["Date", "Payer", "Quantity", "Concept", "Assignment/Recipient"]
-    table = pd.DataFrame.from_records(records[::-1], columns=columns)
-    st.table(table)
+    st.table(
+        {"Date": date, "Payer": payer, "Quantity": quantity, "Concept": concept, "Assignment/Recipient": assignment}
+    )
 
 
 def _show_balance(ledger: Ledger) -> None:
-    records = []
+    member_color_map = utils.build_member_color_map(ledger.members, COLOR_PALETTE)
+    member = []
+    spent = []
+    paid = []
+    owed = []
     for name, account in ledger.accounts.items():
-        records.append((name, f"{account.spent:.2f}", f"{account.paid:.2f}", f"{account.owed:.2f}"))
+        member.append(_format_member_name(name, member_color_map))
+        spent.append(f"{account.spent:.2f}")
+        paid.append(f"{account.paid:.2f}")
+        color_owed = utils.COLOR_OWES if account.owed >= 0 else utils.COLOR_IS_OWED
+        owed.append(f":{color_owed}[{account.owed:.2f}]")
 
-    columns = ["Member", "Total spent", "Total paid", "Owed"]
-    table = pd.DataFrame.from_records(records, columns=columns)
     st.subheader("Balance")
-    st.table(table)
+    st.table({"Member": member, "Total spent": spent, "Total paid": paid, "Owed": owed})
     settle_transfers = ledger.settle_transfers
     if not settle_transfers:
+        st.subheader("Balance is settled!")
         return
-    records_settle = []
+
+    payer = []
+    quantity = []
+    recipient = []
     for transfer in settle_transfers:
-        records_settle.append((transfer.payer, transfer.recipient, f"{transfer.quantity:.2f}"))
-    columns_settle = ["From", "To", "Quantity"]
-    table_settle = pd.DataFrame.from_records(records_settle, columns=columns_settle)
+        payer.append(_format_member_name(transfer.payer, member_color_map))
+        recipient.append(_format_member_name(transfer.recipient, member_color_map))
+        quantity.append(f"{transfer.quantity:.2f}")
     st.subheader("Transfers to settle")
-    st.table(table_settle)
+    st.table({"From": payer, "To": recipient, "Quantity": quantity})
 
 
 def main() -> None:
