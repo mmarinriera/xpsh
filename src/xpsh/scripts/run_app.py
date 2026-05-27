@@ -7,7 +7,7 @@ APP_PATH = Path(__file__).with_name("app.py")
 
 def main() -> None:
     file_path = sys.argv[1]
-    subprocess.run([sys.executable, "-m", "streamlit", "run", APP_PATH, file_path])
+    subprocess.run([sys.executable, "-m", "streamlit", "run", APP_PATH, "--server.headless", "true", file_path])
 
 
 if __name__ == "__main__":
