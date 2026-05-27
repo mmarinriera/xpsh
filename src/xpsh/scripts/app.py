@@ -72,9 +72,7 @@ def _format_assignment(entry: LedgerEntry, member_color_map: dict[str, str]) -> 
         assignments_str = []
         for name, fraction in entry.assignment.items():
             color = member_color_map[name]
-            assignments_str.append(
-                f":color[**{name}**={100 * fraction:.2f}%]{{foreground='{color}'}}"
-            )  # f"{_format_member_name(name,member_color_map)}={100*fraction:.2f}%")
+            assignments_str.append(f":color[**{name}**={100 * fraction:.2f}%]{{foreground='{color}'}}")
         return ", ".join(assignments_str)
     raise ValueError(f"Unknown entry type: {entry}")
 
@@ -82,7 +80,6 @@ def _format_assignment(entry: LedgerEntry, member_color_map: dict[str, str]) -> 
 def _show_last_entries(ledger: Ledger, n_last_entries: int = 10) -> None:
     entries = ledger.entries[-n_last_entries:] if len(ledger.entries) > n_last_entries else ledger.entries
     member_color_map = utils.build_member_color_map(ledger.members, COLOR_PALETTE)
-    records = []
     date = []
     payer = []
     quantity = []
@@ -96,7 +93,6 @@ def _show_last_entries(ledger: Ledger, n_last_entries: int = 10) -> None:
             entry.concept if isinstance(entry, Expense) else f":color[Transfer]{{foreground='{COLOR_TRANSFER_TYPE}'}}"
         )
         assignment.append(_format_assignment(entry, member_color_map))
-        records.append((date, payer, quantity, concept, assignment))
     st.table(
         {"Date": date, "Payer": payer, "Quantity": quantity, "Concept": concept, "Assignment/Recipient": assignment}
     )
@@ -139,15 +135,16 @@ def main() -> None:
 
     ledger = Ledger(file_path=file_path)
 
+    tabs = ("Expense", "Transfer")
+
     active_tab = st.pills(
         "Type of entry",
-        ("Expense", "Transfer"),
+        tabs,
         key="active_tab",
-        label_visibility="collapsed",
         default="Expense",
     )
 
-    if active_tab == "Expense":
+    if active_tab == tabs[0]:
         _submit_expense(ledger)
     else:
         _submit_transfer(ledger)
