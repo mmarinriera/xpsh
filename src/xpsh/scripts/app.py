@@ -112,7 +112,7 @@ def _show_balance(ledger: Ledger) -> None:
         member.append(_format_member_name(name, member_color_map))
         spent.append(f"{account.spent:.2f}")
         paid.append(f"{account.paid:.2f}")
-        color_owed = utils.COLOR_OWES if account.owed >= 0 else utils.COLOR_IS_OWED
+        color_owed = utils.COLOR_OWES if account.owed > 0 else utils.COLOR_IS_OWED
         owed.append(f":{color_owed}[{account.owed:.2f}]")
 
     st.subheader("Balance")
