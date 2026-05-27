@@ -11,7 +11,8 @@ from xpsh.ledger import Transfer
 from xpsh.scripts import utils
 
 DATE_FMT = "%d/%m/%Y"
-COLOR_PALETTE = ["#295bff", "#cb11ff", "#ffee00", "#fa6d1b", "#26f0ff", "#fd6bf1"]
+COLOR_PALETTE = ["#295bff", "#cb11ff", "#ffee00", "#fa6d1b", "#a6ff00", "#ff90f6", "#ff6565", "#76adff", "#ffa845"]
+COLOR_TRANSFER_TYPE = "#26f0ff"
 
 
 def _submit_expense(ledger: Ledger) -> None:
@@ -79,7 +80,7 @@ def _format_assignment(entry: LedgerEntry, member_color_map: dict[str, str]) -> 
 
 
 def _show_last_entries(ledger: Ledger, n_last_entries: int = 10) -> None:
-    entries = ledger.entries[:-n_last_entries] if len(ledger.entries) > n_last_entries else ledger.entries
+    entries = ledger.entries[-n_last_entries:] if len(ledger.entries) > n_last_entries else ledger.entries
     member_color_map = utils.build_member_color_map(ledger.members, COLOR_PALETTE)
     records = []
     date = []
@@ -91,7 +92,9 @@ def _show_last_entries(ledger: Ledger, n_last_entries: int = 10) -> None:
         date.append(entry.date.strftime(DATE_FMT))
         payer.append(_format_member_name(entry.payer, member_color_map))
         quantity.append(f"{entry.quantity}")
-        concept.append(entry.concept if isinstance(entry, Expense) else f":{utils.COLOR_TRANSFER_TYPE}[Transfer]")
+        concept.append(
+            entry.concept if isinstance(entry, Expense) else f":color[Transfer]{{foreground='{COLOR_TRANSFER_TYPE}'}}"
+        )
         assignment.append(_format_assignment(entry, member_color_map))
         records.append((date, payer, quantity, concept, assignment))
     st.table(
