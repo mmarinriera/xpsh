@@ -11,7 +11,17 @@ from xpsh.scripts import utils
 
 DATE_FMT = "%d/%m/%Y"
 DATE_INPUT_FMT = "DD/MM/YYYY"
-COLOR_PALETTE = ["#295bff", "#cb11ff", "#ffee00", "#fa6d1b", "#a6ff00", "#ff90f6", "#ff6565", "#76adff", "#ffa845"]
+COLOR_PALETTE = [
+    "#0077ff",
+    "#a75efc",
+    "#ffee00",
+    "#fa6d1b",
+    "#178552",
+    "#c20078",
+    "#fff78b",
+    "#f5a7ff",
+    "#2cffa7",
+]
 COLOR_TRANSFER_TYPE = "#26f0ff"
 
 
