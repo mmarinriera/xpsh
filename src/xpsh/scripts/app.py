@@ -1,4 +1,3 @@
-import datetime
 import sys
 from pathlib import Path
 
@@ -11,6 +10,7 @@ from xpsh.ledger import Transfer
 from xpsh.scripts import utils
 
 DATE_FMT = "%d/%m/%Y"
+DATE_INPUT_FMT = "DD/MM/YYYY"
 COLOR_PALETTE = ["#295bff", "#cb11ff", "#ffee00", "#fa6d1b", "#a6ff00", "#ff90f6", "#ff6565", "#76adff", "#ffa845"]
 COLOR_TRANSFER_TYPE = "#26f0ff"
 
@@ -18,7 +18,7 @@ COLOR_TRANSFER_TYPE = "#26f0ff"
 def _submit_expense(ledger: Ledger) -> None:
     st.subheader("Submit an expense")
 
-    date = datetime.date.today()
+    date = st.date_input("Date of expense", value="today", format=DATE_INPUT_FMT)
     payer = st.selectbox("Who payed?", options=ledger.members)
     quantity = st.number_input("Quantity payed", min_value=0.01)
     concept = st.text_input("What was it for?", value="")
@@ -45,10 +45,10 @@ def _submit_expense(ledger: Ledger) -> None:
 def _submit_transfer(ledger: Ledger) -> None:
     st.subheader("Submit an transfer")
 
+    date = st.date_input("Date of expense", value="today", format=DATE_INPUT_FMT)
     payer = st.selectbox("Who payed?", options=ledger.members)
     quantity = st.number_input("Quantity payed", min_value=0.01)
     recipient = st.selectbox("Who received the transfer?", options=ledger.members)
-    date = datetime.date.today()
 
     if st.button("Submit transfer!"):
         if payer == recipient:
