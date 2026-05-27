@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.3.4 (2026-05-27)
+
+### Bug Fixes
+
+- **app**: Script command
+  ([`f8a6950`](https://github.com/mmarinriera/xpsh/commit/f8a6950ef0c08a4efb92bc71f8f171cd3649fc94))
+
+
 ## v0.3.3 (2026-05-27)
 
 ### Bug Fixes
