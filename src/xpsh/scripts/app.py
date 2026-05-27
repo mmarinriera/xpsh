@@ -7,7 +7,10 @@ import streamlit as st
 
 from xpsh.ledger import Expense
 from xpsh.ledger import Ledger
+from xpsh.ledger import LedgerEntry
 from xpsh.ledger import Transfer
+
+DATE_FMT = "%d/%m/%Y"
 
 
 def _submit_expense(ledger: Ledger) -> None:
@@ -55,16 +58,26 @@ def _submit_transfer(ledger: Ledger) -> None:
         st.success("Transfer added!")
 
 
+def _format_assignment(entry: LedgerEntry) -> str:
+    if isinstance(entry, Transfer):
+        return entry.recipient
+    if isinstance(entry, Expense):
+        assignments_str = []
+        for name, fraction in entry.assignment.items():
+            assignments_str.append(f"{name}={100 * fraction:.2f}%")
+        return ", ".join(assignments_str)
+    raise ValueError(f"Unknown entry type: {entry}")
+
+
 def _show_last_entries(ledger: Ledger, n_last_entries: int = 10) -> None:
     entries = ledger.entries[:-n_last_entries] if len(ledger.entries) > n_last_entries else ledger.entries
     records = []
     for entry in entries:
-        output = entry.to_output().split(",")
-        date = output.pop(0)
-        payer = output.pop(0)
-        quantity = output.pop(0)
-        concept = output.pop(0) if isinstance(entry, Expense) else "Transfer"
-        assignment = ", ".join(output) if isinstance(entry, Expense) else output[0]
+        date = entry.date.strftime(DATE_FMT)
+        payer = entry.payer
+        quantity = f"{entry.quantity}"
+        concept = entry.concept if isinstance(entry, Expense) else "Transfer"
+        assignment = _format_assignment(entry)
         records.append((date, payer, quantity, concept, assignment))
     columns = ["Date", "Payer", "Quantity", "Concept", "Assignment/Recipient"]
     table = pd.DataFrame.from_records(records[::-1], columns=columns)
