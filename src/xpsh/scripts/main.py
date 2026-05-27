@@ -20,7 +20,17 @@ from xpsh.ledger import Transfer
 from . import utils
 
 logger = logging.getLogger(__name__)
-COLOR_PALETTE = ["deep_sky_blue2", "purple", "yellow", "orange_red1", "dark_cyan", "pink"]
+COLOR_PALETTE = [
+    "deep_sky_blue2",
+    "medium_purple1",
+    "yellow",
+    "orange_red1",
+    "dark_cyan",
+    "deep_pink3",
+    "wheat1",
+    "thistle1",
+    "aquamarine1",
+]
 
 EXAMPLE_LEDGERS = {"turtles": "tmnt.xpsh", "fellowship": "lotr.xpsh", "teveo": "tbo.xpsh"}
 EXAMPLE_LEDGERS_DESCR = {
@@ -42,7 +52,9 @@ class AssignmentDictRenderer:
         for name, fraction in self.assignment.items():
             color = self.name_color_map[name]
             text_elements.append(
-                Text(": ").join([Text(name, style=color), Text(f"{100 * fraction:.2f}%", style=f"italic {color}")])
+                Text("=", style=color).join(
+                    [Text(name, style=color), Text(f"{100 * fraction:.2f}%", style=f"italic {color}")]
+                )
             )
         return Text(", ").join(text_elements)
 
