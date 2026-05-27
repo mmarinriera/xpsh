@@ -11,6 +11,11 @@ def get_version() -> str:
     return VERSION
 
 
+def get_resource(file_name: str) -> Path:
+    """Returns file path from application resource file"""
+    return Path(__file__).parent.parent / "resources" / file_name
+
+
 def _init_logging() -> None:
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
