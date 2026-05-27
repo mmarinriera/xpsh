@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.3.6 (2026-05-27)
+
+### Bug Fixes
+
+- **app**: Pass headless arg on script
+  ([`f31de29`](https://github.com/mmarinriera/xpsh/commit/f31de297a37b7a7fc0d588a0052977f4290037a3))
+
+
 ## v0.3.5 (2026-05-27)
 
 ### Bug Fixes
