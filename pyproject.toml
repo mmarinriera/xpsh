@@ -98,6 +98,7 @@ build_command = """
     uv build
 """
 version_toml = [ "pyproject.toml:project.version" ]
+version_variables = [ "src/xpsh/__init__.py:VERSION" ]
 branch = "main"
 commit_message = "chore(release): version {version}"
 allow_zero_version = true

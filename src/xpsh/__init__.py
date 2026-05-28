@@ -3,14 +3,13 @@
 import logging
 from pathlib import Path
 
-from .ledger import DATE_OUT_FMT
 from .ledger import Account
 from .ledger import Expense
 from .ledger import Ledger
 from .ledger import LedgerEntry
 from .ledger import Transfer
 
-VERSION = "0.0.0"
+VERSION = "0.3.6"
 LOG_FORMAT = "%(asctime)s | [%(name)s] %(levelname)s - %(message)s"
 
 

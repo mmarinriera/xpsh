@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+from xpsh import VERSION
 from xpsh.ledger import DATE_OUT_FMT
 from xpsh.scripts.main import EXAMPLE_LEDGERS
 from xpsh.scripts.main import _resolve_input_path
@@ -28,6 +29,12 @@ def test_resolve_input_path(tmp_path: Path, subtests: pytest.Subtests) -> None:
 def test_resolve_input_path_examples() -> None:
     for kw in EXAMPLE_LEDGERS:
         assert _resolve_input_path(kw).exists()
+
+
+def test_version() -> None:
+    runner = CliRunner()
+    result = runner.invoke(xpsh, ["--version"])
+    assert result.output.strip() == VERSION
 
 
 def test_create(tmp_path: Path, subtests: pytest.Subtests) -> None:
