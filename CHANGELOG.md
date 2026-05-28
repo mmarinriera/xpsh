@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.3.8 (2026-05-28)
+
+### Bug Fixes
+
+- **app**: Show version
+  ([`fb9942b`](https://github.com/mmarinriera/xpsh/commit/fb9942b0b49a7390c00b68912a6d8dccc7a76dc1))
+
+
 ## v0.3.7 (2026-05-28)
 
 ### Bug Fixes
