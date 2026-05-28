@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v0.3.7 (2026-05-28)
+
+### Bug Fixes
+
+- Update version variable in module
+  ([`73635ba`](https://github.com/mmarinriera/xpsh/commit/73635ba5ebc6ac8994631b7afadb40ab0406b5e8))
+
+### Refactoring
+
+- **ledger**: Import classes from top module
+  ([`8489058`](https://github.com/mmarinriera/xpsh/commit/8489058f65ef4198e2580c0f8a89ff14c261720f))
+
+
 ## v0.3.6 (2026-05-27)
 
 ### Bug Fixes
