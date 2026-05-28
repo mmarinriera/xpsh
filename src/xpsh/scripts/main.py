@@ -10,12 +10,12 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
+from xpsh import Expense
+from xpsh import Ledger
+from xpsh import Transfer
 from xpsh import get_resource
 from xpsh import get_version
 from xpsh.ledger import DATE_OUT_FMT
-from xpsh.ledger import Expense
-from xpsh.ledger import Ledger
-from xpsh.ledger import Transfer
 
 from . import utils
 

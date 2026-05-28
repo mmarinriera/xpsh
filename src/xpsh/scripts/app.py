@@ -3,10 +3,10 @@ from pathlib import Path
 
 import streamlit as st
 
-from xpsh.ledger import Expense
-from xpsh.ledger import Ledger
-from xpsh.ledger import LedgerEntry
-from xpsh.ledger import Transfer
+from xpsh import Expense
+from xpsh import Ledger
+from xpsh import LedgerEntry
+from xpsh import Transfer
 from xpsh.scripts import utils
 
 DATE_FMT = "%d/%m/%Y"
