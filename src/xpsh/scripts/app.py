@@ -7,6 +7,7 @@ from xpsh import Expense
 from xpsh import Ledger
 from xpsh import LedgerEntry
 from xpsh import Transfer
+from xpsh import get_version
 from xpsh.scripts import utils
 
 DATE_FMT = "%d/%m/%Y"
@@ -141,6 +142,7 @@ def _show_balance(ledger: Ledger) -> None:
 
 def main() -> None:
     st.title("Expense Share!")
+    st.badge(f"v{get_version()}", color="violet")
     file_path = Path(sys.argv[1])
 
     ledger = Ledger(file_path=file_path)
