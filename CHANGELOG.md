@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.4.1 (2026-06-03)
+
+### Bug Fixes
+
+- **app**: Clean up print
+  ([`dfed8d8`](https://github.com/mmarinriera/xpsh/commit/dfed8d8d9072328b941ac389c338a7c0d2977246))
+
+
 ## v0.4.0 (2026-06-03)
 
 ### Features
