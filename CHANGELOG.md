@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.4.0 (2026-06-03)
+
+### Features
+
+- **app**: Add simple calculator
+  ([`b4039f2`](https://github.com/mmarinriera/xpsh/commit/b4039f256f4860d0e7d8dd0ddfb4003a543ab8e6))
+
+
 ## v0.3.8 (2026-05-28)
 
 ### Bug Fixes

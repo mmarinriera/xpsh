@@ -9,7 +9,7 @@ from .ledger import Ledger
 from .ledger import LedgerEntry
 from .ledger import Transfer
 
-VERSION = "0.3.8"
+VERSION = "0.4.0"
 LOG_FORMAT = "%(asctime)s | [%(name)s] %(levelname)s - %(message)s"
 
 
