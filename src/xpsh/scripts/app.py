@@ -34,7 +34,6 @@ def _parse_calculator_input(expression: str) -> float:
     expression = expression.replace("-", "+-")
 
     num_str = expression.split("+")
-    st.text(num_str)
     numbers = [float(n) for n in num_str]
     return sum(numbers)
 
