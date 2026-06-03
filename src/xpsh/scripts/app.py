@@ -26,6 +26,19 @@ COLOR_PALETTE = [
 COLOR_TRANSFER_TYPE = "#26f0ff"
 
 
+def _parse_calculator_input(expression: str) -> float:
+    """Only additions and subtractions allowed"""
+    expression = expression.strip().replace(" ", "").replace(",", ".")
+
+    # Dirty trick to handle subtraction as an addition of a negative
+    expression = expression.replace("-", "+-")
+
+    num_str = expression.split("+")
+    st.text(num_str)
+    numbers = [float(n) for n in num_str]
+    return sum(numbers)
+
+
 def _submit_expense(ledger: Ledger) -> None:
     st.subheader("Submit an expense")
 
@@ -155,6 +168,15 @@ def main() -> None:
         key="active_tab",
         default="Expense",
     )
+
+    with st.expander("Calculator (only addition and subtraction allowed)", expanded=False):
+        calculator_input = st.text_input("Type add operation.", value="")
+        if calculator_input:
+            try:
+                result = _parse_calculator_input(calculator_input)
+                st.success(f"Result = {result:.2f}")
+            except ValueError:
+                st.error("Invalid input")
 
     if active_tab == tabs[0]:
         _submit_expense(ledger)
