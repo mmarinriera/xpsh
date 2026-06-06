@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.4.2 (2026-06-06)
+
+### Bug Fixes
+
+- **app**: Rearrange UI elements
+  ([`c4de2ee`](https://github.com/mmarinriera/xpsh/commit/c4de2eeb1cb22bf98afda51866ccbc954d3290fe))
+
+
 ## v0.4.1 (2026-06-03)
 
 ### Bug Fixes
