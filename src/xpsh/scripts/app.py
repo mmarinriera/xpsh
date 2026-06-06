@@ -42,8 +42,11 @@ def _submit_expense(ledger: Ledger) -> None:
     st.subheader("Submit an expense")
 
     date = st.date_input("Date of expense", value="today", format=DATE_INPUT_FMT)
-    payer = st.selectbox("Who payed?", options=ledger.members)
-    quantity = st.number_input("Quantity payed", min_value=0.01)
+    col_payer, col_quantity = st.columns(2)
+    with col_payer:
+        payer = st.selectbox("Who payed?", options=ledger.members)
+    with col_quantity:
+        quantity = st.number_input("Quantity payed", min_value=0.01)
     concept = st.text_input("What was it for?", value="")
 
     st.markdown("How is it split?")
@@ -69,8 +72,11 @@ def _submit_transfer(ledger: Ledger) -> None:
     st.subheader("Submit an transfer")
 
     date = st.date_input("Date of expense", value="today", format=DATE_INPUT_FMT)
-    payer = st.selectbox("Who payed?", options=ledger.members)
-    quantity = st.number_input("Quantity payed", min_value=0.01)
+    col_payer, col_quantity = st.columns(2)
+    with col_payer:
+        payer = st.selectbox("Who payed?", options=ledger.members)
+    with col_quantity:
+        quantity = st.number_input("Quantity payed", min_value=0.01)
     recipient = st.selectbox("Who received the transfer?", options=ledger.members)
 
     if st.button("Submit transfer!"):
@@ -182,11 +188,11 @@ def main() -> None:
     else:
         _submit_transfer(ledger)
 
+    with st.expander("Balance", expanded=True):
+        _show_balance(ledger)
+
     with st.expander("Last entries"):
         _show_last_entries(ledger)
-
-    with st.expander("Balance"):
-        _show_balance(ledger)
 
 
 if __name__ == "__main__":
