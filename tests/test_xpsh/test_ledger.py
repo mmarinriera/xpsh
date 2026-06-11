@@ -261,6 +261,40 @@ def test_add_expense(tmp_path: Path, subtests: pytest.Subtests) -> None:
             )
 
 
+def test_add_reimbursement(tmp_path: Path, subtests: pytest.Subtests) -> None:
+    out_path = tmp_path / "out.txt"
+    ledger = Ledger(file_path=out_path, members=["A", "B"])
+    acc_a = ledger.accounts["A"]
+    acc_b = ledger.accounts["B"]
+    ledger.add_expense(
+        Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}, concept="Stuff", date=GENERIC_DATE)
+    )
+    ledger.add_expense(
+        Expense(payer="A", quantity=-10.0, assignment={"A": 1, "B": 1}, concept="Reimbursement", date=GENERIC_DATE)
+    )
+    with subtests.test("Test account balanced with reimbursement."):
+        assert acc_a.paid == 0.0
+        assert acc_a.spent == 0.0
+        assert acc_a.owed == 0.0
+        assert acc_b.paid == 0.0
+        assert acc_b.spent == 0.0
+        assert acc_b.owed == 0.0
+
+    ledger.add_expense(Expense(payer="A", quantity=10.0, assignment={"B": 1}, concept="More stuff", date=GENERIC_DATE))
+    ledger.add_expense(
+        Expense(payer="B", quantity=-10.0, assignment={"B": 1}, concept="Another Reimbursement", date=GENERIC_DATE)
+    )
+
+    with subtests.test("Test reimbursement to account that didn't pay."):
+        assert acc_a.paid == 10.0
+        assert acc_a.spent == 0.0
+        assert acc_a.owed == -10.0
+        assert acc_b.paid == -10.0
+        assert acc_b.spent == 0.0
+        assert acc_b.owed == 10.0
+        assert ledger.settle_transfers == [Transfer("B", 10, "A")]
+
+
 def test_add_transfer(tmp_path: Path, subtests: pytest.Subtests) -> None:
     out_path = tmp_path / "out.txt"
     ledger = Ledger(file_path=out_path, members=["A", "B"])
