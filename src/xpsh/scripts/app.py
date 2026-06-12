@@ -51,12 +51,12 @@ def _submit_expense(ledger: Ledger) -> None:
     concept = st.text_input("What was it for?", value="")
 
     st.markdown("How is it split?")
-    assignment = {}
+    assignment: dict[str, float] = {}
 
     cols = st.columns(len(ledger.members))
     for name, col in zip(ledger.members, cols):
         with col:
-            assignment[name] = st.number_input(name, min_value=0, max_value=100, value=1)
+            assignment[name] = float(st.number_input(name, min_value=0, max_value=100, value=1))
 
     if st.button("Submit expense!"):
         if not concept:
@@ -81,12 +81,12 @@ def _submit_reimbursement(ledger: Ledger) -> None:
     concept = st.text_input("What was it?", value="Reimbursement")
 
     st.markdown("How is it split?")
-    assignment = {}
+    assignment: dict[str, float] = {}
 
     cols = st.columns(len(ledger.members))
     for name, col in zip(ledger.members, cols):
         with col:
-            assignment[name] = st.number_input(name, min_value=0, max_value=100, value=1)
+            assignment[name] = float(st.number_input(name, min_value=0, max_value=100, value=1))
 
     if st.button("Submit reimbursement!"):
         expense = Expense(payer=recipient, quantity=-quantity, concept=concept, assignment=assignment, date=date)
