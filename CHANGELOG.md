@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.5.0 (2026-06-12)
+
+### Features
+
+- Support reimbursements ([#9](https://github.com/mmarinriera/xpsh/pull/9),
+  [`5c793c3`](https://github.com/mmarinriera/xpsh/commit/5c793c3a2f88147fd2bc58726c8d181f1b26230b))
+
+
 ## v0.4.2 (2026-06-06)
 
 ### Bug Fixes
