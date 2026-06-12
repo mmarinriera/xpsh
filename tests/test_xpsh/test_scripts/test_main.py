@@ -154,6 +154,27 @@ E,01/01/2000,A,25.0,Even more stuff,A:0.5,B:0.5
         assert file_content == TARGET_FILE_CONTENT
 
 
+def test_add_reimbursement(example_file_path: Path, subtests: pytest.Subtests) -> None:
+    TARGET_FILE_CONTENT = """A,B
+E,01/01/2000,A,10.0,Stuff,A:0.5,B:0.5
+E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
+E,01/01/2000,A,-25.0,Even more stuff,A:0.5,B:0.5
+"""
+
+    runner = CliRunner()
+    result = runner.invoke(
+        xpsh, ["add-reimbursement", str(example_file_path), "A", "25", "Even more stuff", "-d", "01/01/2000"]
+    )
+
+    with subtests.test("Test cli add_reimbursement exitcode"):
+        assert result.exit_code == 0
+
+    with subtests.test("Test cli add_reimbursement file output"):
+        with open(example_file_path) as f:
+            file_content = f.read()
+        assert file_content == TARGET_FILE_CONTENT
+
+
 def test_add_expense_default_date(example_file_path: Path, subtests: pytest.Subtests) -> None:
 
     current_date = datetime.date.today().strftime(DATE_OUT_FMT)
