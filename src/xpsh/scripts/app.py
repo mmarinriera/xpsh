@@ -24,6 +24,7 @@ COLOR_PALETTE = [
     "#2cffa7",
 ]
 COLOR_TRANSFER_TYPE = "#26f0ff"
+COLOR_REIMBURSEMENT_TYPE = "#00c817"
 
 
 def _parse_calculator_input(expression: str) -> float:
@@ -50,12 +51,12 @@ def _submit_expense(ledger: Ledger) -> None:
     concept = st.text_input("What was it for?", value="")
 
     st.markdown("How is it split?")
-    assignment = {}
+    assignment: dict[str, float] = {}
 
     cols = st.columns(len(ledger.members))
     for name, col in zip(ledger.members, cols):
         with col:
-            assignment[name] = st.number_input(name, min_value=0, max_value=100, value=1)
+            assignment[name] = float(st.number_input(name, min_value=0, max_value=100, value=1))
 
     if st.button("Submit expense!"):
         if not concept:
@@ -66,6 +67,32 @@ def _submit_expense(ledger: Ledger) -> None:
         ledger.add_expense(expense)
         ledger.save_to_file()
         st.success("Expense added!")
+
+
+def _submit_reimbursement(ledger: Ledger) -> None:
+    st.subheader("Submit a reimbursement")
+
+    date = st.date_input("Date of reimbursement", value="today", format=DATE_INPUT_FMT)
+    col_recipient, col_quantity = st.columns(2)
+    with col_recipient:
+        recipient = st.selectbox("Who was payed?", options=ledger.members)
+    with col_quantity:
+        quantity = st.number_input("Quantity payed", min_value=0.01)
+    concept = st.text_input("What was it?", value="Reimbursement")
+
+    st.markdown("How is it split?")
+    assignment: dict[str, float] = {}
+
+    cols = st.columns(len(ledger.members))
+    for name, col in zip(ledger.members, cols):
+        with col:
+            assignment[name] = float(st.number_input(name, min_value=0, max_value=100, value=1))
+
+    if st.button("Submit reimbursement!"):
+        expense = Expense(payer=recipient, quantity=-quantity, concept=concept, assignment=assignment, date=date)
+        ledger.add_expense(expense)
+        ledger.save_to_file()
+        st.success("Reimbursement added!")
 
 
 def _submit_transfer(ledger: Ledger) -> None:
@@ -117,10 +144,21 @@ def _show_last_entries(ledger: Ledger, n_last_entries: int = 10) -> None:
     for entry in entries[::-1]:
         date.append(entry.date.strftime(DATE_FMT))
         payer.append(_format_member_name(entry.payer, member_color_map))
-        quantity.append(f"{entry.quantity}")
-        concept.append(
-            entry.concept if isinstance(entry, Expense) else f":color[Transfer]{{foreground='{COLOR_TRANSFER_TYPE}'}}"
-        )
+        if isinstance(entry, Expense):
+            quantity.append(
+                f"{entry.quantity}"
+                if entry.quantity >= 0.0
+                else f":color[{-entry.quantity}]{{foreground='{COLOR_REIMBURSEMENT_TYPE}'}}"
+            )
+            concept.append(
+                entry.concept
+                if entry.quantity >= 0.0
+                else f":color[{entry.concept}]{{foreground='{COLOR_REIMBURSEMENT_TYPE}'}}"
+            )
+        else:
+            quantity.append(f":color[{entry.quantity}]{{foreground='{COLOR_TRANSFER_TYPE}'}}")
+            concept.append(f":color[Transfer]{{foreground='{COLOR_TRANSFER_TYPE}'}}")
+
         assignment.append(_format_assignment(entry, member_color_map))
     st.table(
         {"Date": date, "Payer": payer, "Quantity": quantity, "Concept": concept, "Assignment/Recipient": assignment}
@@ -165,7 +203,7 @@ def main() -> None:
 
     ledger = Ledger(file_path=file_path)
 
-    tabs = ("Expense", "Transfer")
+    tabs = ("Expense", "Reimbursement", "Transfer")
 
     active_tab = st.pills(
         "Type of entry",
@@ -185,6 +223,8 @@ def main() -> None:
 
     if active_tab == tabs[0]:
         _submit_expense(ledger)
+    elif active_tab == tabs[1]:
+        _submit_reimbursement(ledger)
     else:
         _submit_transfer(ledger)
 

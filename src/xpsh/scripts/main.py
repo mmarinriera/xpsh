@@ -121,11 +121,17 @@ def _pretty_print_entries(ledger: Ledger, n_last_entries: int | None) -> None:
 
     for entry in entries:
         if isinstance(entry, Expense):
-            entry_type = Text("Expense")
+            entry_type = Text("Expense") if entry.quantity >= 0.0 else Text("Reimbursement")
+            quantity = (
+                Text(f"{entry.quantity:.2f}")
+                if entry.quantity >= 0.0
+                else Text(f"{-entry.quantity:.2f}", style=utils.COLOR_IS_OWED)
+            )
             assignment = AssignmentDictRenderer(entry.assignment, name_color_map)
             concept = Text(entry.concept)
         elif isinstance(entry, Transfer):
             entry_type = Text("Transfer", style=utils.COLOR_TRANSFER_TYPE)
+            quantity = Text(f"{entry.quantity:.2f}", style=utils.COLOR_TRANSFER_TYPE)
             assignment = Text(entry.recipient, style=name_color_map[entry.recipient])
             concept = Text("-")
         else:
@@ -135,7 +141,7 @@ def _pretty_print_entries(ledger: Ledger, n_last_entries: int | None) -> None:
             entry_type,
             entry.date.strftime(DATE_OUT_FMT),
             Text(entry.payer, style=name_color_map[entry.payer]),
-            Text(f"{entry.quantity:.2f}"),
+            quantity,
             concept,
             assignment,
         )
@@ -152,6 +158,43 @@ def _resolve_input_path(input_str: str, exist_only: bool = True) -> Path:
             sys.exit(1)
         return input_path
     return get_resource(EXAMPLE_LEDGERS[input_str])
+
+
+def _add_expense(
+    file_path: str,
+    payer: str,
+    quantity: float,
+    concept: str,
+    assignment: list[tuple[str, float]],
+    date_str: str | None,
+    print_output: bool,
+    no_save: bool,
+) -> None:
+    resolved_path = _resolve_input_path(file_path)
+    ledger = Ledger(file_path=resolved_path)
+    logger.info("Ledger loaded from file")
+    if not assignment:
+        assignment = [(n, 1) for n in ledger.members]
+    logger.info("No assignment provided. Equal parts assigned.")
+
+    assignment_dict = {v[0]: v[1] for v in assignment}
+
+    if date_str is not None:
+        date = datetime.datetime.strptime(date_str, DATE_OUT_FMT).date()
+    else:
+        date = datetime.date.today()
+
+    expense = Expense(payer=payer, quantity=quantity, concept=concept, assignment=assignment_dict, date=date)
+    ledger.add_expense(expense)
+
+    if print_output:
+        _pretty_print_balance(ledger)
+
+    if no_save:
+        return
+
+    ledger.save_to_file()
+    logger.info("Updated ledger saved to file.")
 
 
 def print_version(ctx: click.Context, _: Any, value: Any) -> None:
@@ -328,7 +371,7 @@ def add_expense(
 
     >>> -a Zipi 75 -a Zape 25
 
-    If no assignment is specified, the expense if split equally among all members by default.
+    If no assignment is specified, the expense is split equally among all members by default.
 
     If not expense date is specified with -d/--date option, the current date is set by default.
 
@@ -337,31 +380,93 @@ def add_expense(
     Run `xpsh examples` to check the available examples.
 
     """
-    resolved_path = _resolve_input_path(file_path)
-    ledger = Ledger(file_path=resolved_path)
-    logger.info("Ledger loaded from file")
-    if not assignment:
-        assignment = [(n, 1) for n in ledger.members]
-    logger.info("No assignment provided. Equal parts assigned.")
+    _add_expense(
+        file_path=file_path,
+        payer=payer,
+        quantity=quantity,
+        concept=concept,
+        assignment=assignment,
+        date_str=date_str,
+        print_output=print_output,
+        no_save=no_save,
+    )
 
-    assignment_dict = {v[0]: v[1] for v in assignment}
 
-    if date_str is not None:
-        date = datetime.datetime.strptime(date_str, DATE_OUT_FMT).date()
-    else:
-        date = datetime.date.today()
+@xpsh.command
+@click.argument("file_path", type=str)
+@click.argument("recipient", type=str)
+@click.argument("quantity", type=float)
+@click.argument("concept", type=str)
+@click.option(
+    "-a",
+    "--assignment",
+    "assignment",
+    type=(str, float),
+    default=[],
+    multiple=True,
+    help="The part assigned to each person.",
+)
+@click.option(
+    "-d", "--date", "date_str", type=str, default=None, help="Date in 'dd/mm/yyy' format (current day by default)."
+)
+@click.option(
+    "-p", "--print-output", "print_output", is_flag=True, help="Show the ledger balance after adding the reimbursement."
+)
+@click.option("--no-save", "no_save", is_flag=True, help="Do not update the file with the new entry.")
+def add_reimbursement(
+    file_path: str,
+    recipient: str,
+    quantity: float,
+    concept: str,
+    assignment: list[tuple[str, float]],
+    date_str: str | None,
+    print_output: bool,
+    no_save: bool,
+) -> None:
+    """
+    Add a new reimbursement to a ledger.
 
-    expense = Expense(payer=payer, quantity=quantity, concept=concept, assignment=assignment_dict, date=date)
-    ledger.add_expense(expense)
+    FILE_PATH is the path to the ledger file to be loaded.
 
-    if print_output:
-        _pretty_print_balance(ledger)
+    RECIPIENT is the person that received the reimbursement.
 
-    if no_save:
-        return
+    QUANTITY is the quantity received.
 
-    ledger.save_to_file()
-    logger.info("Updated ledger saved to file.")
+    CONCEPT is a short message to identify the entry (try to avoid including commas in the message).
+
+    In the context of the ledger, a reimbursement entry is simply an expense entry with a negative quantity.
+
+    Use -a/--assignment option (multiple times if needed) to define how the reimbursement is split between members.
+    For example, if you want to split it 75%-25% between members "Zipi" and "Zape", pass the following:
+
+    >>> -a Zipi 0.75 -a Zape 0.25
+
+    Alternatively, the following would be equivalent and also valid
+    (as long as the ratios between assignments stay the same):
+
+    >>> -a Zipi 3 -a Zape 1
+
+    >>> -a Zipi 75 -a Zape 25
+
+    If no assignment is specified, the reimbursement is split equally among all members by default.
+
+    If not expense date is specified with -d/--date option, the current date is set by default.
+
+    HINT: You can load one of the example ledgers by passing a keyword instead of FILE_PATH.
+
+    Run `xpsh examples` to check the available examples.
+
+    """
+    _add_expense(
+        file_path=file_path,
+        payer=recipient,
+        quantity=-quantity,
+        concept=concept,
+        assignment=assignment,
+        date_str=date_str,
+        print_output=print_output,
+        no_save=no_save,
+    )
 
 
 @xpsh.command
