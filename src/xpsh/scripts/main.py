@@ -1,10 +1,12 @@
 import datetime
 import logging
-import sys
+from enum import Enum
 from pathlib import Path
+from typing import Annotated
 from typing import Any
 
 import click
+import typer
 
 from xpsh import Expense
 from xpsh import Ledger
@@ -27,12 +29,17 @@ EXAMPLE_LEDGERS_DESCR = {
 }
 
 
+class GroupedByPeriod(Enum):
+    day = "day"
+    month = "month"
+
+
 def _resolve_input_path(input_str: str, exist_only: bool = True) -> Path:
     if input_str not in EXAMPLE_LEDGERS:
         input_path = Path(input_str)
         if not input_path.exists() and exist_only:
             logger.critical("Input file path doesn't exist. Aborting.")
-            sys.exit(1)
+            raise typer.Exit(1)
         return input_path
     return get_resource(EXAMPLE_LEDGERS[input_str])
 
@@ -53,7 +60,7 @@ def _add_expense(
         ledger = Ledger(file_path=resolved_path)
     except ValueError as e:
         logger.critical(f"{e} Aborting.")
-        sys.exit(1)
+        raise typer.Exit(1)
 
     if not assignment:
         assignment = [(n, 1) for n in ledger.members]
@@ -72,7 +79,7 @@ def _add_expense(
         ledger.add_expense(expense)
     except ValueError as e:
         logger.critical(f"{e} Aborting.")
-        sys.exit(1)
+        raise typer.Exit(1)
 
     if print_output:
         console.print_balance(ledger)
@@ -149,25 +156,23 @@ def print_version(ctx: click.Context, _: Any, value: Any) -> None:
     ctx.exit()
 
 
-@click.group(context_settings=dict(help_option_names=["-h", "--help"]))
-@click.option(
-    "-v",
-    "--version",
-    is_flag=True,
-    help="Print version and exit.",
-    callback=print_version,
-    expose_value=False,
-    is_eager=True,
-)
-@click.option(
-    "-d",
-    "--debug",
-    "debug_mode",
-    is_flag=True,
-    help="Enable debug mode.",
-)
-@click.pass_context
-def xpsh(ctx: click.Context, debug_mode: bool) -> None:
+xpsh = typer.Typer()
+
+
+def version_callback(value: bool) -> None:
+    if value:
+        print(get_version())
+        raise typer.Exit()
+
+
+@xpsh.callback()
+def cli_callback(
+    ctx: typer.Context,
+    version: Annotated[
+        bool, typer.Option("-v", "--version", callback=version_callback, is_eager=True, help="Show version and exit.")
+    ] = False,
+    debug_mode: Annotated[bool, typer.Option("-d", "--debug", help="Enable DEBUG logging.")] = False,
+) -> None:
     """Expense sharing tool"""
     ctx.ensure_object(dict)
 
@@ -177,11 +182,14 @@ def xpsh(ctx: click.Context, debug_mode: bool) -> None:
     ctx.obj["debug"] = debug_mode
 
 
-@xpsh.command
-@click.argument("file_path", type=str, help="File path where the ledger data will be saved.")
-@click.argument("members", nargs=-1, type=str, help="Member names that should be included in the ledger.")
-@click.option("-f", "--force", "force", is_flag=True, help="Force overwriting of existing file in FILE_PATH.")
-def create(file_path: str, members: list[str], force: bool) -> None:
+@xpsh.command()
+def create(
+    file_path: Annotated[str, typer.Argument(help="File path where the ledger data will be saved.")],
+    members: Annotated[list[str], typer.Argument(help="Member names that should be included in the ledger.")],
+    force: Annotated[
+        bool, typer.Option("-f", "--force", help="Force overwriting of existing file in FILE_PATH.")
+    ] = False,
+) -> None:
     """
     Create new ledger.
 
@@ -197,24 +205,24 @@ def create(file_path: str, members: list[str], force: bool) -> None:
     if resolved_path.exists():
         if not force:
             logger.critical("Ledger file already exists. Aborting.")
-            sys.exit(1)
-        else:
-            logger.info(f"Overwriting existing file in {file_path}")
+            raise typer.Exit(1)
+        logger.info(f"Overwriting existing file in {file_path}")
 
     try:
         ledger = Ledger(file_path=resolved_path, members=members, overwrite=force)
     except ValueError as e:
         logger.critical(f"{e} Aborting.")
-        sys.exit(1)
+        raise typer.Exit(1)
 
     ledger.save_to_file()
     logger.info("New ledger saved to file.")
 
 
-@xpsh.command
-@click.argument("file_path", type=str, help="Path to the ledger file.")
-@click.option("-g", "--graph", "graph", is_flag=True, help="Show graph of balance history.")
-def balance(file_path: str, graph: bool) -> None:
+@xpsh.command()
+def balance(
+    file_path: Annotated[str, typer.Argument(help="Path to the ledger file.")],
+    graph: Annotated[bool, typer.Option("-g", "--graph", help="Show graph of balance history.")] = False,
+) -> None:
     """
     Calculate and display ledger balance.
 
@@ -232,23 +240,22 @@ def balance(file_path: str, graph: bool) -> None:
         ledger = Ledger(file_path=resolved_path, track_history=graph)
     except ValueError as e:
         logger.critical(f"{e} Aborting.")
-        sys.exit(1)
+        raise typer.Exit(1)
 
     console.print_balance(ledger, graph)
 
 
-@xpsh.command
-@click.argument("file_path", type=str, help="Path to the ledger file.")
-@click.option("-n", "--n-last-entries", "n_last_entries", default=None, type=int, help="Show N most recent expenses.")
-@click.option("-g", "--graph", "graph", is_flag=True, help="Show stacked bar graph of expense history.")
-@click.option(
-    "--grouped-by",
-    "grouped",
-    type=click.Choice(["day", "month"]),
-    default="month",
-    help="How to aggregate expenses in graph.",
-)
-def expenses(file_path: str, n_last_entries: int | None, graph: bool, grouped: str) -> None:
+@xpsh.command()
+def expenses(
+    file_path: Annotated[str, typer.Argument(help="Path to the ledger file.")],
+    n_last_entries: Annotated[
+        int | None, typer.Option("-n", "--n-last-entries", help="Show N most recent expenses.")
+    ] = None,
+    graph: Annotated[bool, typer.Option("-g", "--graph", help="Show stacked bar graph of expense history.")] = False,
+    grouped: Annotated[
+        GroupedByPeriod, typer.Option("--grouped-by", help="How to aggregate expenses in graph.")
+    ] = GroupedByPeriod.month,
+) -> None:
     """
     List and display ledger entries.
 
@@ -265,35 +272,31 @@ def expenses(file_path: str, n_last_entries: int | None, graph: bool, grouped: s
         ledger = Ledger(file_path=resolved_path)
     except ValueError as e:
         logger.critical(f"{e} Aborting.")
-        sys.exit(1)
+        raise typer.Exit(1)
 
-    console.print_expenses(ledger, n_last_entries, graph, grouped)
+    console.print_expenses(ledger, n_last_entries, graph, grouped.value)
 
 
-@xpsh.command
+@xpsh.command()
 def examples() -> None:
     """Displays the keywords to load different example files using the other CLI commands."""
     console.print_examples(EXAMPLE_LEDGERS_DESCR)
 
 
-@xpsh.command
-@click.argument("file_path", type=str, help="Path to the ledger file.")
-@click.option("-p", "--payer", "payer", type=str, default=None, help="Filter entries by payer.")
-@click.option("-c", "--concept", "concept", type=str, default=None, help="Filter entries by concept.")
-@click.option(
-    "-f", "--from", "start_date", type=str, default=None, help="Filter entries later than date ('dd/mm/yyy' format)."
-)
-@click.option(
-    "-u", "--until", "end_date", type=str, default=None, help="Filter entries earlier than date ('dd/mm/yyy' format)."
-)
-@click.option("-t", "--include-transfers", "include_transfers", is_flag=True, help="Include transfers in the search.")
+@xpsh.command()
 def search(
-    file_path: str,
-    payer: str | None,
-    concept: str | None,
-    start_date: str | None,
-    end_date: str | None,
-    include_transfers: bool,
+    file_path: Annotated[str, typer.Argument(help="Path to the ledger file.")],
+    payer: Annotated[str | None, typer.Option("-p", "--payer", help="Filter entries by payer.")] = None,
+    concept: Annotated[str | None, typer.Option("-c", "--concept", help="Filter entries by concept.")] = None,
+    start_date: Annotated[
+        str | None, typer.Option("-f", "--from", help="Filter entries later than date ('dd/mm/yyy' format).")
+    ] = None,
+    end_date: Annotated[
+        str | None, typer.Option("-u", "--until", help="Filter entries earlier than date ('dd/mm/yyy' format).")
+    ] = None,
+    include_transfers: Annotated[
+        bool, typer.Option("-t", "--include-transfers", help="Include transfers in the search.")
+    ] = False,
 ) -> None:
     """
     Search a ledger for an entry.
@@ -318,40 +321,25 @@ def search(
         )
     except ValueError as e:
         logger.critical(f"{e} Aborting.")
-        sys.exit(1)
+        raise typer.Exit(1)
     console.print_search_entries(ledger, entries)
 
 
-@xpsh.command
-@click.argument("file_path", type=str, help="Path to the ledger file.")
-@click.argument("payer", type=str, help="Who payed for the expense.")
-@click.argument("quantity", type=float, help="Quantity payed.")
-@click.argument("concept", type=str, help="What was the expense for.")
-@click.option(
-    "-a",
-    "--assignment",
-    "assignment",
-    type=(str, float),
-    default=[],
-    multiple=True,
-    help="The part assigned to each person.",
-)
-@click.option(
-    "-d", "--date", "date_str", type=str, default=None, help="Date in 'dd/mm/yyy' format (current day by default)."
-)
-@click.option(
-    "-p", "--print-output", "print_output", is_flag=True, help="Show the ledger balance after adding the expense."
-)
-@click.option("--no-save", "no_save", is_flag=True, help="Do not update the file with the new expense.")
+@xpsh.command()
 def add_expense(
-    file_path: str,
-    payer: str,
-    quantity: float,
-    concept: str,
-    assignment: list[tuple[str, float]],
-    date_str: str | None,
-    print_output: bool,
-    no_save: bool,
+    file_path: Annotated[str, typer.Argument(help="Path to the ledger file.")],
+    payer: Annotated[str, typer.Argument(help="Who payed for the expense.")],
+    quantity: Annotated[float, typer.Argument(help="Quantity payed.")],
+    concept: Annotated[str, typer.Argument(help="What was the expense for.")],
+    assignment: Annotated[
+        list[tuple[str, float]],
+        typer.Option("-a", "--assignment", default_factory=list, help="The part assigned to each person."),
+    ],
+    date_str: Annotated[
+        str | None, typer.Option("-d", "--date", help="Date in 'dd/mm/yyy' format (current day by default).")
+    ] = None,
+    print_output: Annotated[bool, typer.Option("-p", help="Show the ledger balance after adding the expense.")] = False,
+    no_save: Annotated[bool, typer.Option(help="Do not update the file with the new expense.")] = False,
 ) -> None:
     """
     Add a new expense to a ledger.
@@ -397,36 +385,21 @@ def add_expense(
     )
 
 
-@xpsh.command
-@click.argument("file_path", type=str, help="Path to the ledger file.")
-@click.argument("recipient", type=str, help="Who received the reimbursement.")
-@click.argument("quantity", type=float, help="Quantity reimbursed.")
-@click.argument("concept", type=str, help="What was the reimbursement for.")
-@click.option(
-    "-a",
-    "--assignment",
-    "assignment",
-    type=(str, float),
-    default=[],
-    multiple=True,
-    help="The part assigned to each person.",
-)
-@click.option(
-    "-d", "--date", "date_str", type=str, default=None, help="Date in 'dd/mm/yyy' format (current day by default)."
-)
-@click.option(
-    "-p", "--print-output", "print_output", is_flag=True, help="Show the ledger balance after adding the reimbursement."
-)
-@click.option("--no-save", "no_save", is_flag=True, help="Do not update the file with the new entry.")
+@xpsh.command()
 def add_reimbursement(
-    file_path: str,
-    recipient: str,
-    quantity: float,
-    concept: str,
-    assignment: list[tuple[str, float]],
-    date_str: str | None,
-    print_output: bool,
-    no_save: bool,
+    file_path: Annotated[str, typer.Argument(help="Path to the ledger file.")],
+    recipient: Annotated[str, typer.Argument(help="Who received the reimbursement.")],
+    quantity: Annotated[float, typer.Argument(help="Quantity reimbursed.")],
+    concept: Annotated[str, typer.Argument(help="What was the reimbursement for.")],
+    assignment: Annotated[
+        list[tuple[str, float]],
+        typer.Option("-a", "--assignment", default_factory=list, help="The part assigned to each person."),
+    ],
+    date_str: Annotated[
+        str | None, typer.Option("-d", "--date", help="Date in 'dd/mm/yyy' format (current day by default).")
+    ] = None,
+    print_output: Annotated[bool, typer.Option("-p", help="Show the ledger balance after adding the expense.")] = False,
+    no_save: Annotated[bool, typer.Option(help="Do not update the file with the new expense.")] = False,
 ) -> None:
     """
     Add a new reimbursement to a ledger.
@@ -474,26 +447,17 @@ def add_reimbursement(
     )
 
 
-@xpsh.command
-@click.argument("file_path", type=str, help="Path to the ledger file.")
-@click.argument("payer", type=str, help="Who made the transfer.")
-@click.argument("quantity", type=float, help="Quantity transferred.")
-@click.argument("recipient", type=str, help="Who received the transfer.")
-@click.option(
-    "-d", "--date", "date_str", type=str, default=None, help="Date in 'dd/mm/yyy' format (current day by default)."
-)
-@click.option(
-    "-p", "--print-output", "print_output", is_flag=True, help="Show the ledger balance after adding the expense."
-)
-@click.option("--no-save", "no_save", is_flag=True, help="Do not update the file with the new expense.")
+@xpsh.command()
 def add_transfer(
-    file_path: str,
-    payer: str,
-    quantity: float,
-    recipient: str,
-    date_str: str | None,
-    print_output: bool,
-    no_save: bool,
+    file_path: Annotated[str, typer.Argument(help="Path to the ledger file.")],
+    payer: Annotated[str, typer.Argument(help="Who made the transfer.")],
+    quantity: Annotated[float, typer.Argument(help="Quantity transferred.")],
+    recipient: Annotated[str, typer.Argument(help="Who received the transfer.")],
+    date_str: Annotated[
+        str | None, typer.Option("-d", "--date", help="Date in 'dd/mm/yyy' format (current day by default).")
+    ] = None,
+    print_output: Annotated[bool, typer.Option("-p", help="Show the ledger balance after adding the expense.")] = False,
+    no_save: Annotated[bool, typer.Option(help="Do not update the file with the new expense.")] = False,
 ) -> None:
     """
     Add a new transfer between members to a ledger.
@@ -525,7 +489,7 @@ def add_transfer(
         ledger.add_transfer(transfer)
     except ValueError as e:
         logger.critical(f"{e} Aborting.")
-        sys.exit(1)
+        raise typer.Exit(1)
 
     if print_output:
         console.print_balance(ledger)
@@ -537,11 +501,12 @@ def add_transfer(
     logger.info("Updated ledger saved to file.")
 
 
-@xpsh.command
-@click.argument("file_path", type=str, help="Path to the ledger file.")
-@click.argument("index", type=int, help="Entry index.")
-@click.option("-y", "--yes", "yes", is_flag=True, help="Confirm deletion of entry without input prompt.")
-def delete_entry(file_path: str, index: int, yes: bool) -> None:
+@xpsh.command()
+def delete_entry(
+    file_path: Annotated[str, typer.Argument(help="Path to the ledger file.")],
+    index: Annotated[int, typer.Argument(help="Entry index.")],
+    yes: Annotated[bool, typer.Option("-y", help="Confirm deletion of entry without input prompt.")] = False,
+) -> None:
     """
     Delete an entry from the ledger.
 
@@ -559,14 +524,14 @@ def delete_entry(file_path: str, index: int, yes: bool) -> None:
         entry = ledger.get_entry(index)
     except ValueError as e:
         logger.critical(f"{e} Aborting.")
-        sys.exit(1)
+        raise typer.Exit(1)
 
     console.print_single_entry(ledger, index, entry)
     confirm: str = click.prompt("Are you sure you want to delete this entry?[y|n]", default="n") if not yes else "y"
 
     if confirm.lower() != "y":
         logger.info("Action cancelled.")
-        sys.exit(0)
+        raise typer.Exit(0)
 
     ledger.delete_entry(index)
     ledger.save_to_file()
@@ -574,36 +539,19 @@ def delete_entry(file_path: str, index: int, yes: bool) -> None:
     logger.warning("Entries indexing has changed after changed. Check indexes before deleting the next entry!")
 
 
-@xpsh.command
-@click.argument("file_path", type=str, help="Path to the ledger file.")
-@click.argument("index", type=int, help="Entry index.")
-@click.option("-p", "--payer", "payer", type=str, default=None, help="Edit the payer.")
-@click.option("-q", "--quantity", "quantity", type=float, default=None, help="Edit the quantity.")
-@click.option(
-    "-c", "--concept", "concept", type=str, default=None, help="Edit the concept (expense and reimbursement only)."
-)
-@click.option(
-    "-a",
-    "--assignment",
-    "assignment",
-    type=(str, float),
-    default=[],
-    multiple=True,
-    help="Edit the assignment.",
-)
-@click.option("-r", "--recipient", "recipient", type=str, default=None, help="Edit the recipient (transfers only).")
-@click.option("-d", "--date", "date_str", type=str, default=None, help="Edit the date ('dd/mm/yyy' format).")
-@click.option("-y", "--yes", "yes", is_flag=True, help="Confirm deletion of entry without input prompt.")
+@xpsh.command()
 def edit_entry(
-    file_path: str,
-    index: int,
-    payer: str | None,
-    quantity: float | None,
-    concept: str | None,
-    recipient: str | None,
-    assignment: list[tuple[str, float]] | None,
-    date_str: str | None,
-    yes: bool,
+    file_path: Annotated[str, typer.Argument(help="Path to the ledger file.")],
+    index: Annotated[int, typer.Argument(help="Entry index.")],
+    payer: Annotated[str | None, typer.Option("-p", help="Edit the payer.")] = None,
+    quantity: Annotated[float | None, typer.Option("-q", help="Edit the quantity.")] = None,
+    concept: Annotated[
+        str | None, typer.Option("-c", help="Edit the concept (expense and reimbursement only).")
+    ] = None,
+    recipient: Annotated[str | None, typer.Option("-r", help="Edit the recipient (transfers only).")] = None,
+    assignment: Annotated[list[tuple[str, float]] | None, typer.Option("-a", help="Edit the assignment.")] = None,
+    date_str: Annotated[str | None, typer.Option("-d", "--date", help="Edit the date ('dd/mm/yyy' format).")] = None,
+    yes: Annotated[bool, typer.Option("-y", help="Confirm deletion of entry without input prompt.")] = False,
 ) -> None:
     """
     Edit an entry from the ledger.
@@ -621,7 +569,7 @@ def edit_entry(
         entry = ledger.get_entry(index)
     except ValueError as e:
         logger.critical(f"{e} Aborting.")
-        sys.exit(1)
+        raise typer.Exit(1)
 
     new_entry = _build_updated_entry(
         entry,
@@ -638,7 +586,7 @@ def edit_entry(
     confirm: str = click.prompt("Are you sure you want to edit this entry?[y|n]", default="n") if not yes else "y"
     if confirm.lower() != "y":
         logger.info("Action cancelled.")
-        sys.exit(0)
+        raise typer.Exit(0)
 
     ledger.replace_entry(index, new_entry)
     ledger.save_to_file()

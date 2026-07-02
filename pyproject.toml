@@ -15,11 +15,11 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-  "click>=8.5",
   "filelock>=3.29",
   "plotext==5.2.8",
   "rich>=15",
   "streamlit>=1.57",
+  "typer>=0.27.1",
 ]
 urls.Repository = "https://github.com/mmarinriera/xpsh"
 scripts.xpsh = "xpsh.scripts.main:xpsh"
