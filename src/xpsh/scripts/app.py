@@ -200,8 +200,13 @@ def main() -> None:
     st.title("Expense Share!")
     st.badge(f"v{get_version()}", color="violet")
     file_path = Path(sys.argv[1])
+    members = sys.argv[2:]
 
-    ledger = Ledger(file_path=file_path)
+    if not file_path.exists() and not members:
+        st.error("Ledger path does not exist and no member names were passed to create new ledger.")
+        return
+
+    ledger = Ledger(file_path=file_path, members=members, overwrite=False)
 
     tabs = ("Expense", "Reimbursement", "Transfer")
 
