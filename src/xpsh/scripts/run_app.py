@@ -4,7 +4,7 @@ from pathlib import Path
 
 APP_PATH = Path(__file__).with_name("app.py")
 
-PORT = 4242  # 8501
+PORT = 8501
 
 
 def main() -> None:
