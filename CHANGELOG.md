@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.6.0 (2026-07-10)
+
+### Features
+
+- **app**: Create new ledger ([#10](https://github.com/mmarinriera/xpsh/pull/10),
+  [`4e9f063`](https://github.com/mmarinriera/xpsh/commit/4e9f063be194306ea205bf216a4768fe6b98be2f))
+
+
 ## v0.5.0 (2026-06-12)
 
 ### Features
