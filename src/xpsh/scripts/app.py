@@ -197,6 +197,7 @@ def _show_balance(ledger: Ledger) -> None:
 
 
 def main() -> None:
+    st.set_page_config(page_title="XPSH", page_icon="./icons/favicon.png", layout="wide")
     st.title("Expense Share!")
     st.badge(f"v{get_version()}", color="violet")
     file_path = Path(sys.argv[1])
