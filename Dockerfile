@@ -26,4 +26,4 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 EXPOSE 8501
 
-CMD ["uvx", "streamlit", "run", "--server.headless", "true","/app/src/xpsh/scripts/app.py"]
+CMD ["uv", "run", "streamlit", "run", "--server.headless", "true","/app/src/xpsh/scripts/app.py"]
