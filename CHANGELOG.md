@@ -2,6 +2,25 @@
 
 <!-- version list -->
 
+## v0.7.0 (2026-07-16)
+
+### Chores
+
+- **app**: Add icon
+  ([`f0632d8`](https://github.com/mmarinriera/xpsh/commit/f0632d839a8438dcaac17eb78e36054c78cc88ef))
+
+### Features
+
+- **app**: Docker deployment ([#11](https://github.com/mmarinriera/xpsh/pull/11),
+  [`ca30349`](https://github.com/mmarinriera/xpsh/commit/ca30349f392ba38d0371aa587e209bcee3f6df8e))
+
+### Refactoring
+
+- **app**: Ledger file path and members data now passed via
+  ([#11](https://github.com/mmarinriera/xpsh/pull/11),
+  [`ca30349`](https://github.com/mmarinriera/xpsh/commit/ca30349f392ba38d0371aa587e209bcee3f6df8e))
+
+
 ## v0.6.0 (2026-07-10)
 
 ### Features
