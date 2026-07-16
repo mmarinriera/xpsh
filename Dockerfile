@@ -18,7 +18,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --locked --no-install-project --no-editable
 
-# Copy the project into the intermediate image
 COPY . /app
 
 # Sync the project
