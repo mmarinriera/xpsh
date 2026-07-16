@@ -19,11 +19,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-editable
 
 # Final image
-#FROM alpine:latest
+FROM python:3.13-slim
 
 # Copy the environment, but not the source code
-#COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/src /app/src
 
 EXPOSE 8501
 
-CMD ["uv", "run", "streamlit", "run", "--server.headless", "true","/app/src/xpsh/scripts/app.py"]
+CMD ["/app/.venv/bin/streamlit", "run", "--server.headless", "true","/app/src/xpsh/scripts/app.py"]
