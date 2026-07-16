@@ -25,14 +25,6 @@ COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-editable
 
-# Final image
-FROM python:3.13-slim
-
-# Copy the environment
-COPY --from=builder /app/.venv /app/.venv
-COPY --from=builder /app/src /app/src
-COPY --from=builder /app/icons /app/icons
-
 EXPOSE 8501
 
 CMD ["/app/.venv/bin/streamlit", "run", "--server.headless", "true","/app/src/xpsh/scripts/app.py"]
