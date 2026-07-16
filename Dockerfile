@@ -12,7 +12,14 @@ ENV UV_LINK_MODE="copy"
 
 WORKDIR /app
 
-COPY . .
+# Install dependencies
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --locked --no-install-project --no-editable
+
+# Copy the project into the intermediate image
+COPY . /app
 
 # Sync the project
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -21,9 +28,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Final image
 FROM python:3.13-slim
 
-# Copy the environment, but not the source code
+# Copy the environment
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/src /app/src
+COPY --from=builder /app/icons /app/icons
 
 EXPOSE 8501
 
