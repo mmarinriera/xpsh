@@ -2,7 +2,7 @@ exclude: ^(resources|tests/resources)/
 
 repos:
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.14
+    rev: v0.16.0
     hooks:
       - id: ruff
         name: Run ruff to auto-fix lint errors
@@ -21,31 +21,31 @@ repos:
         language_version: python3
 
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.1.0
+    rev: v2.3.0
     hooks:
     -   id: mypy
         files: ^src/xpsh/|^tests
 
 -   repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.16.2
+    rev: v4.16.5
     hooks:
       - id: commitizen
         stages: [commit-msg]
 
 -   repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.11.16
+    rev: 0.11.31
     hooks:
     -   id: uv-lock
         name: Update uv lock file
 
 - repo: https://github.com/jsh9/pydoclint
-  rev: 0.8.4
+  rev: 0.9.1
   hooks:
     - id: pydoclint
       files: ^src/xpsh/
 
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: v2.21.2
+  rev: v2.25.3
   hooks:
     - id: pyproject-fmt
 
@@ -56,7 +56,7 @@ repos:
       files: tox.toml
 
 - repo: https://github.com/python-jsonschema/check-jsonschema
-  rev: 0.37.2
+  rev: 0.37.4
   hooks:
     - id: check-github-workflows
       args: ["--verbose"]
