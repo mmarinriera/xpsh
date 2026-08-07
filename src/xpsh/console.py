@@ -155,7 +155,7 @@ def _build_plot(entries: list[LedgerEntry], members: list[str], grouped: str) ->
 def print_entries(ledger: Ledger, n_last_entries: int | None, plot: bool, grouped: str) -> None:
     """Pretty print ledger entries in terminal using rich text."""
     if n_last_entries is not None and n_last_entries < len(ledger.entries):
-        entries = ledger.entries[:-n_last_entries]
+        entries = ledger.entries[-n_last_entries:]
     else:
         entries = ledger.entries
 
