@@ -24,9 +24,6 @@ COLOR_PALETTE = [
 ]
 
 
-console = Console()
-
-
 class AssignmentDictRenderer:
     def __init__(self, assignment: dict[str, float], name_color_map: dict[str, str]):
         if any(name not in name_color_map for name in assignment):
@@ -64,7 +61,7 @@ def print_balance(ledger: Ledger) -> None:
             Text(f"{account.paid:.2f}"),
             Text(f"{account.owed:.2f}", style=color_owed),
         )
-
+    console = Console()
     console.print(balance)
 
     settle = Table(title="Transfers to settle", title_justify="left")
@@ -143,5 +140,6 @@ def print_examples(examples_dict: dict[str, str]) -> None:
     for kw, descr in examples_dict.items():
         table.add_row(f"[bold cyan]{kw}[/bold cyan]", descr)
 
+    console = Console()
     console.print(table)
     console.print("e.g. run: [bold purple]xpsh balance fellowship[/bold purple]")
