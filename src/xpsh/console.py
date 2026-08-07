@@ -132,7 +132,7 @@ def _build_plot(entries: list[LedgerEntry], members: list[str], grouped: str) ->
     dates = []
     series: dict[str, list[float]] = {m: [] for m in members}
 
-    for date, group in itertools.groupby(entries, key=key):
+    for date, group in itertools.groupby([e for e in entries if isinstance(e, Expense)], key=key):
         aggregate = dict.fromkeys(members, 0.0)
         for entry in group:
             aggregate[entry.payer] += entry.quantity
