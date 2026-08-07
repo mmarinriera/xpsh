@@ -17,6 +17,7 @@ classifiers = [
 dependencies = [
   "click>=8.4",
   "filelock>=3.29",
+  "plotext>=5.3.2",
   "rich>=15",
   "streamlit>=1.57",
 ]

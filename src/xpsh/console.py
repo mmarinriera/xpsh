@@ -1,11 +1,20 @@
+import itertools
 import logging
 
+import plotext as plt
+from rich.ansi import AnsiDecoder
 from rich.console import Console
+from rich.console import ConsoleOptions
+from rich.console import Group
+from rich.console import RenderResult
+from rich.jupyter import JupyterMixin
+from rich.padding import Padding
 from rich.table import Table
 from rich.text import Text
 
 from xpsh import Expense
 from xpsh import Ledger
+from xpsh import LedgerEntry
 from xpsh import Transfer
 from xpsh import utils
 from xpsh.ledger import DATE_OUT_FMT
@@ -22,6 +31,8 @@ COLOR_PALETTE = [
     "thistle1",
     "aquamarine1",
 ]
+
+PLOT_PAD = 2
 
 
 class AssignmentDictRenderer:
@@ -41,6 +52,31 @@ class AssignmentDictRenderer:
                 )
             )
         return Text(", ").join(text_elements)
+
+
+def _stacked_bar_plot(width: int, dates: list[str], series: dict[str, list[float]], title: str) -> str:
+    plt.clf()
+    labels = list(series.keys())
+    y = list(series.values())
+    plt.simple_stacked_bar(dates, y, labels=labels, width=width, title=title)
+    plt.title("Ledger entries")
+    out: str = plt.build()
+
+    return out
+
+
+class plotextMixin(JupyterMixin):
+    def __init__(self, dates: list[str], series: dict[str, list[float]], title: str) -> None:
+        self.decoder = AnsiDecoder()
+        self.dates = dates
+        self.series = series
+        self.title = title
+
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+        self.width = options.max_width or console.width
+        canvas = _stacked_bar_plot(self.width - 2 * PLOT_PAD, self.dates, self.series, title=self.title)
+        self.rich_canvas = Group(*self.decoder.decode(canvas))
+        yield self.rich_canvas
 
 
 def print_balance(ledger: Ledger) -> None:
@@ -85,7 +121,29 @@ def print_balance(ledger: Ledger) -> None:
     console.print(settle)
 
 
-def print_entries(ledger: Ledger, n_last_entries: int | None) -> None:
+def _build_plot(entries: list[LedgerEntry], members: list[str], grouped: str) -> plotextMixin:
+    if grouped == "day":
+        key = lambda e: e.date.strftime("%d/%m/%Y")
+    elif grouped == "month":
+        key = lambda e: e.date.strftime("%m/%Y")
+    else:
+        raise ValueError("Invalid date grouping.")
+
+    dates = []
+    series: dict[str, list[float]] = {m: [] for m in members}
+
+    for date, group in itertools.groupby(entries, key=key):
+        aggregate = dict.fromkeys(members, 0.0)
+        for entry in group:
+            aggregate[entry.payer] += entry.quantity
+        dates.append(date)
+        for m, v in aggregate.items():
+            series[m].append(v)
+
+    return plotextMixin(dates=dates, series=series, title=f"Expense history grouped by {grouped}")
+
+
+def print_entries(ledger: Ledger, n_last_entries: int | None, plot: bool, grouped: str) -> None:
     """Pretty print ledger entries in terminal using rich text."""
     if n_last_entries is not None and n_last_entries < len(ledger.entries):
         entries = ledger.entries[:-n_last_entries]
@@ -131,6 +189,8 @@ def print_entries(ledger: Ledger, n_last_entries: int | None) -> None:
 
     console = Console()
     console.print(entry_table)
+    if plot:
+        console.print(Padding(_build_plot(entries, ledger.members, grouped=grouped), pad=PLOT_PAD))
 
 
 def print_examples(examples_dict: dict[str, str]) -> None:

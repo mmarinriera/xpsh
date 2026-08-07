@@ -160,7 +160,15 @@ def balance(file_path: str) -> None:
 @xpsh.command
 @click.argument("file_path", type=str)
 @click.option("-n", "--n-last-entries", "n_last_entries", default=None, type=int, help="Show N most recent expenses.")
-def expenses(file_path: str, n_last_entries: int | None) -> None:
+@click.option("-p", "--plot-entries", "plot", is_flag=True, help="Stack bar plot of expense history.")
+@click.option(
+    "--grouped-by",
+    "grouped",
+    type=click.Choice(["day", "month"]),
+    default="month",
+    help="How to aggregate expenses in plot.",
+)
+def expenses(file_path: str, n_last_entries: int | None, plot: bool, grouped: str) -> None:
     """
     List and display ledger entries.
 
@@ -175,7 +183,7 @@ def expenses(file_path: str, n_last_entries: int | None) -> None:
     ledger = Ledger(file_path=resolved_path)
     logger.info("Ledger loaded from file")
 
-    console.print_entries(ledger, n_last_entries)
+    console.print_entries(ledger, n_last_entries, plot, grouped)
 
 
 @xpsh.command
