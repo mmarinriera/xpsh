@@ -8,7 +8,7 @@ from xpsh import Ledger
 from xpsh import LedgerEntry
 from xpsh import Transfer
 from xpsh import get_version
-from xpsh.scripts import utils
+from xpsh import utils
 
 DATE_FMT = "%d/%m/%Y"
 DATE_INPUT_FMT = "DD/MM/YYYY"
