@@ -20,19 +20,25 @@ from xpsh import utils
 from xpsh.ledger import DATE_OUT_FMT
 
 logger = logging.getLogger(__name__)
+
+# Rich / plotext color 8-bit color codes
 COLOR_PALETTE = [
-    "deep_sky_blue2",
-    "medium_purple1",
-    "yellow",
-    "orange_red1",
-    "dark_cyan",
-    "deep_pink3",
-    "wheat1",
-    "thistle1",
-    "aquamarine1",
+    38,  # "deep_sky_blue2"
+    141,  # "medium_purple1"
+    3,  # "yellow"
+    202,  # "orange_red1"
+    36,  # "dark_cyan"
+    162,  # "deep_pink3"
+    229,  # "wheat1"
+    225,  # "thistle1"
+    122,  # "aquamarine1"
 ]
 
 PLOT_PAD = 2
+
+
+def _build_member_color_map(members: list[str], color_palette: list[int]) -> dict[str, str]:
+    return {m: f"color({c})" for m, c in zip(members, itertools.cycle(color_palette))}
 
 
 class AssignmentDictRenderer:
@@ -54,11 +60,13 @@ class AssignmentDictRenderer:
         return Text(", ").join(text_elements)
 
 
-def _stacked_bar_plot(width: int, dates: list[str], series: dict[str, list[float]], title: str) -> str:
+def _stacked_bar_plot(
+    width: int, dates: list[str], series: dict[str, list[float]], colors: list[int], title: str
+) -> str:
     plt.clf()
     labels = list(series.keys())
     y = list(series.values())
-    plt.simple_stacked_bar(dates, y, labels=labels, width=width, title=title)
+    plt.simple_stacked_bar(dates, y, labels=labels, colors=colors, width=width, title=title)
     plt.title("Ledger entries")
     out: str = plt.build()
 
@@ -74,14 +82,15 @@ class plotextMixin(JupyterMixin):
 
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         self.width = options.max_width or console.width
-        canvas = _stacked_bar_plot(self.width - 2 * PLOT_PAD, self.dates, self.series, title=self.title)
+        colors = [c for _, c in zip(self.series.keys(), itertools.cycle(COLOR_PALETTE))]
+        canvas = _stacked_bar_plot(self.width - 2 * PLOT_PAD, self.dates, self.series, title=self.title, colors=colors)
         self.rich_canvas = Group(*self.decoder.decode(canvas))
         yield self.rich_canvas
 
 
 def print_balance(ledger: Ledger) -> None:
     """Pretty print ledger balance in terminal using rich text."""
-    name_color_map = utils.build_member_color_map(ledger.members, COLOR_PALETTE)
+    name_color_map = _build_member_color_map(ledger.members, COLOR_PALETTE)
 
     balance = Table(title="Balance", title_justify="left")
     balance.add_column("Member", justify="right", style="cyan", no_wrap=True)
@@ -150,7 +159,7 @@ def print_entries(ledger: Ledger, n_last_entries: int | None, plot: bool, groupe
     else:
         entries = ledger.entries
 
-    name_color_map = utils.build_member_color_map(ledger.members, COLOR_PALETTE)
+    name_color_map = _build_member_color_map(ledger.members, COLOR_PALETTE)
 
     entry_table = Table(title="Entries", title_justify="left")
     entry_table.add_column("Type", justify="right")
