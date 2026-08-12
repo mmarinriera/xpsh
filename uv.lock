@@ -586,19 +586,11 @@ wheels = [
 [[package]]
 name = "plotext"
 version = "5.2.8"
-source = { editable = "../plotext" }
-
-[package.metadata]
-requires-dist = [
-    { name = "ffpyplayer", marker = "extra == 'video'", specifier = ">=4.3.5" },
-    { name = "opencv-python", marker = "extra == 'video'", specifier = ">=4.5.5" },
-    { name = "pafy", marker = "extra == 'video'", specifier = ">=0.5.5" },
-    { name = "pillow", marker = "extra == 'image'", specifier = ">=8.4" },
-    { name = "pillow", marker = "extra == 'video'", specifier = ">=8.4" },
-    { name = "shtab", marker = "extra == 'completion'" },
-    { name = "youtube-dl", marker = "extra == 'video'", specifier = "==2020.12.2" },
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/27/d7/58f5ec766e41f8338f04ec47dbd3465db04fbe2a6107bca5f0670ced253a/plotext-5.2.8.tar.gz", hash = "sha256:319a287baabeb8576a711995f973a2eba631c887aa6b0f33ab016f12c50ffebe", size = 58233, upload-time = "2022-10-30T15:42:10.905Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/63/de/82df3f400392b586d18a8bd90714309c7e1fcf74c0f2e42a4f8abc347634/plotext-5.2.8-py3-none-any.whl", hash = "sha256:7364cf72e6c9bffaf96158340fd2e0058faf404edbbc1e7a2aed421c8638d475", size = 60210, upload-time = "2022-10-30T15:42:08.68Z" },
 ]
-provides-extras = ["image", "video", "completion"]
 
 [[package]]
 name = "pluggy"
@@ -1066,7 +1058,7 @@ dev = [
 requires-dist = [
     { name = "click", specifier = ">=8.4" },
     { name = "filelock", specifier = ">=3.29" },
-    { name = "plotext", editable = "../plotext" },
+    { name = "plotext", specifier = "==5.2.8" },
     { name = "rich", specifier = ">=15" },
     { name = "streamlit", specifier = ">=1.57" },
 ]
