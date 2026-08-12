@@ -34,7 +34,7 @@ COLOR_PALETTE = [
     122,  # "aquamarine1"
 ]
 
-PLOT_PAD = 2
+PLOT_PAD = (1, 2)
 
 
 def _build_member_color_map(members: list[str], color_palette: list[int]) -> dict[str, str]:
@@ -82,26 +82,28 @@ class plotextMixin(JupyterMixin):
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         self.width = options.max_width or console.width
         colors = [c for _, c in zip(self.series.keys(), itertools.cycle(COLOR_PALETTE))]
-        canvas = _stacked_bar_plot(self.width - 2 * PLOT_PAD, self.dates, self.series, title=self.title, colors=colors)
+        canvas = _stacked_bar_plot(
+            self.width - 2 * PLOT_PAD[1], self.dates, self.series, title=self.title, colors=colors
+        )
         self.rich_canvas = Group(*self.decoder.decode(canvas))
         yield self.rich_canvas
 
 
-def _balance_history_plot(width: int, ledger: Ledger, title: str, colors: list[int]) -> str:
+def _balance_history_plot(width: int, height: int, ledger: Ledger, title: str, colors: list[int]) -> str:
 
     t = plt.datetimes_to_string(ledger.history["total_expenses_t"])
     q = ledger.history["total_expenses_q"]
 
-    logger.debug(f"w {width}")
+    logger.debug(f"w {width},h {height}")
     plt.date_form("d/m/Y")
     plt.clf()
-    plt.plotsize(width=width, height=width // 2)
+    plt.plotsize(width=width, height=height)
     plt.theme("pro")
-    plt.plot(t, q, label="Total expenses", color="white", marker="hd")
+    plt.plot(t, q, label="Total expenses", color="white", marker="fhd")
     for m, c in zip(ledger.members, colors):
         t = plt.datetimes_to_string(ledger.history[f"account_{m}_t"])
         q = ledger.history[f"account_{m}_q"]
-        plt.plot(t, q, label=f"Paid by {m}", color=c, marker="hd")
+        plt.plot(t, q, label=f"Paid by {m}", color=c, marker="fhd")
 
     plt.title(title)
     out: str = plt.build()
@@ -120,7 +122,13 @@ class plotextMixinBalance(JupyterMixin):
         self.height = options.max_height or console.height
 
         colors = [c for _, c in zip(self.ledger.members, itertools.cycle(COLOR_PALETTE))]
-        canvas = _balance_history_plot(self.width - 2 * PLOT_PAD, self.ledger, title=self.title, colors=colors)
+        canvas = _balance_history_plot(
+            self.width - 2 * PLOT_PAD[1],
+            (self.height - 2 * PLOT_PAD[0]) / 2,
+            self.ledger,
+            title=self.title,
+            colors=colors,
+        )
         self.rich_canvas = Group(*self.decoder.decode(canvas))
         yield self.rich_canvas
 

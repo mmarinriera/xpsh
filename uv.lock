@@ -586,7 +586,7 @@ wheels = [
 [[package]]
 name = "plotext"
 version = "5.2.8"
-source = { directory = "../plotext" }
+source = { editable = "../plotext" }
 
 [package.metadata]
 requires-dist = [
@@ -1066,7 +1066,7 @@ dev = [
 requires-dist = [
     { name = "click", specifier = ">=8.4" },
     { name = "filelock", specifier = ">=3.29" },
-    { name = "plotext", directory = "../plotext" },
+    { name = "plotext", editable = "../plotext" },
     { name = "rich", specifier = ">=15" },
     { name = "streamlit", specifier = ">=1.57" },
 ]
