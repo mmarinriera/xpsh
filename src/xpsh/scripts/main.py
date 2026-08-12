@@ -12,6 +12,7 @@ from xpsh import Transfer
 from xpsh import console
 from xpsh import get_resource
 from xpsh import get_version
+from xpsh import set_logging_level
 from xpsh.ledger import DATE_OUT_FMT
 
 logger = logging.getLogger(__name__)
@@ -103,7 +104,7 @@ def xpsh(ctx: click.Context, debug_mode: bool) -> None:
     ctx.ensure_object(dict)
 
     if debug_mode:
-        logger.setLevel(level=logging.DEBUG)
+        set_logging_level(logging.DEBUG)
 
     ctx.obj["debug"] = debug_mode
 
