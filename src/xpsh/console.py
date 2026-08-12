@@ -67,7 +67,6 @@ def _stacked_bar_plot(
     labels = list(series.keys())
     y = list(series.values())
     plt.simple_stacked_bar(dates, y, labels=labels, colors=colors, width=width, title=title)
-    plt.title("Ledger entries")
     out: str = plt.build()
 
     return out
@@ -88,7 +87,45 @@ class plotextMixin(JupyterMixin):
         yield self.rich_canvas
 
 
-def print_balance(ledger: Ledger) -> None:
+def _balance_history_plot(width: int, ledger: Ledger, title: str, colors: list[int]) -> str:
+
+    t = plt.datetimes_to_string(ledger.history["total_expenses_t"])
+    q = ledger.history["total_expenses_q"]
+
+    logger.debug(f"w {width}")
+    plt.date_form("d/m/Y")
+    plt.clf()
+    plt.plotsize(width=width, height=width // 2)
+    plt.theme("pro")
+    plt.plot(t, q, label="Total expenses", color="white", marker="hd")
+    for m, c in zip(ledger.members, colors):
+        t = plt.datetimes_to_string(ledger.history[f"account_{m}_t"])
+        q = ledger.history[f"account_{m}_q"]
+        plt.plot(t, q, label=f"Paid by {m}", color=c, marker="hd")
+
+    plt.title(title)
+    out: str = plt.build()
+
+    return out
+
+
+class plotextMixinBalance(JupyterMixin):
+    def __init__(self, ledger: Ledger, title: str) -> None:
+        self.decoder = AnsiDecoder()
+        self.ledger = ledger
+        self.title = title
+
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+        self.width = options.max_width or console.width
+        self.height = options.max_height or console.height
+
+        colors = [c for _, c in zip(self.ledger.members, itertools.cycle(COLOR_PALETTE))]
+        canvas = _balance_history_plot(self.width - 2 * PLOT_PAD, self.ledger, title=self.title, colors=colors)
+        self.rich_canvas = Group(*self.decoder.decode(canvas))
+        yield self.rich_canvas
+
+
+def print_balance(ledger: Ledger, plot: bool = False) -> None:
     """Pretty print ledger balance in terminal using rich text."""
     name_color_map = _build_member_color_map(ledger.members, COLOR_PALETTE)
 
@@ -128,9 +165,11 @@ def print_balance(ledger: Ledger) -> None:
         )
 
     console.print(settle)
+    if plot:
+        console.print(Padding(plotextMixinBalance(ledger, "Ledger balance history"), pad=PLOT_PAD))
 
 
-def _build_plot(entries: list[LedgerEntry], members: list[str], grouped: str) -> plotextMixin:
+def _build_expense_plot(entries: list[LedgerEntry], members: list[str], grouped: str) -> plotextMixin:
     if grouped == "day":
         key = lambda e: e.date.strftime("%d/%m/%Y")
     elif grouped == "month":
@@ -199,7 +238,7 @@ def print_entries(ledger: Ledger, n_last_entries: int | None, plot: bool, groupe
     console = Console()
     console.print(entry_table)
     if plot:
-        console.print(Padding(_build_plot(entries, ledger.members, grouped=grouped), pad=PLOT_PAD))
+        console.print(Padding(_build_expense_plot(entries, ledger.members, grouped=grouped), pad=PLOT_PAD))
 
 
 def print_examples(examples_dict: dict[str, str]) -> None:

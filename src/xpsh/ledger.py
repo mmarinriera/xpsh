@@ -3,6 +3,7 @@ import logging
 from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
+from typing import Any
 from typing import Protocol
 
 from filelock import FileLock
@@ -167,6 +168,7 @@ class Ledger:
     entries: list[LedgerEntry] = field(default_factory=list)
     accounts: dict[str, Account] = field(default_factory=dict)
     overwrite: bool = False
+    track_history: bool = False
     _lock: FileLock = field(init=False)
 
     @property
@@ -181,8 +183,19 @@ class Ledger:
 
         _member_list_sanity_check(self.members)
 
+        if self.track_history:
+            self._init_history()
+
         for name in self.members:
             self.accounts[name] = Account(name=name)
+
+    def _init_history(self) -> None:
+        self.history: dict[str, list[Any]] = {}
+        self.history["total_expenses_t"] = []
+        self.history["total_expenses_q"] = []
+        for m in self.members:
+            self.history[f"account_{m}_t"] = []
+            self.history[f"account_{m}_q"] = []
 
     def load_data_from_file(self) -> None:
         """
@@ -196,6 +209,9 @@ class Ledger:
             header = next(f)
             self.members = header.strip().split(",")
             _member_list_sanity_check(self.members)
+            if self.track_history:
+                self._init_history()
+
             for name in self.members:
                 self.accounts[name] = Account(name=name)
 
@@ -266,6 +282,12 @@ class Ledger:
             account = self.accounts[name]
             account.spent += expense.quantity * fraction
 
+        if self.track_history:
+            self.history["total_expenses_t"].append(expense.date)
+            self.history["total_expenses_q"].append(sum(a.spent for a in self.accounts.values()))
+            self.history[f"account_{expense.payer}_t"].append(expense.date)
+            self.history[f"account_{expense.payer}_q"].append(payer_account.paid)
+
     def add_transfer(self, transfer: Transfer) -> None:
         """
         Add transfer to the ledger.
@@ -288,6 +310,12 @@ class Ledger:
         payer_account.paid += transfer.quantity
         recipient_account = self.accounts[transfer.recipient]
         recipient_account.paid -= transfer.quantity
+
+        if self.track_history:
+            self.history[f"account_{transfer.payer}_t"].append(transfer.date)
+            self.history[f"account_{transfer.payer}_q"].append(payer_account.paid)
+            self.history[f"account_{transfer.recipient}_t"].append(transfer.date)
+            self.history[f"account_{transfer.recipient}_q"].append(recipient_account.paid)
 
     def calculate_balance(self) -> list[Transfer]:
         """

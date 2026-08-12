@@ -140,7 +140,8 @@ def create(file_path: str, members: list[str], force: bool) -> None:
 
 @xpsh.command
 @click.argument("file_path", type=str)
-def balance(file_path: str) -> None:
+@click.option("-p", "--plot-entries", "plot", is_flag=True, help="Stack bar plot of expense history.")
+def balance(file_path: str, plot: bool) -> None:
     """
     Calculate and display ledger balance.
 
@@ -153,9 +154,9 @@ def balance(file_path: str) -> None:
     Run `xpsh examples` to check the available examples.
     """
     resolved_path = _resolve_input_path(file_path)
-    ledger = Ledger(file_path=resolved_path)
+    ledger = Ledger(file_path=resolved_path, track_history=plot)
     logger.info("Ledger loaded from file")
-    console.print_balance(ledger)
+    console.print_balance(ledger, plot)
 
 
 @xpsh.command
