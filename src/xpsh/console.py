@@ -126,7 +126,7 @@ class plotextMixinBalance(JupyterMixin):
         colors = [c for _, c in zip(self.ledger.members, itertools.cycle(COLOR_PALETTE))]
         canvas = _balance_history_plot(
             self.width - 2 * PLOT_PAD[1],
-            (self.height - 2 * PLOT_PAD[0]) / 2,
+            (self.height - 2 * PLOT_PAD[0]) // 2,
             self.ledger,
             title=self.title,
             colors=colors,
