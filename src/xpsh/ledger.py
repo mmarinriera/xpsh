@@ -191,11 +191,16 @@ class Ledger:
 
     def _init_history(self) -> None:
         self.history: dict[str, list[Any]] = {}
-        self.history["total_expenses_t"] = []
-        self.history["total_expenses_q"] = []
+        self.history["dates"] = []
+        self.history["total_expenses"] = []
         for m in self.members:
-            self.history[f"account_{m}_t"] = []
-            self.history[f"account_{m}_q"] = []
+            self.history[f"account_{m}_paid"] = []
+
+    def _update_history(self, e: LedgerEntry) -> None:
+        self.history["dates"].append(e.date)
+        self.history["total_expenses"].append(sum(a.spent for a in self.accounts.values()))
+        for m in self.members:
+            self.history[f"account_{m}_paid"].append(self.accounts[m].paid)
 
     def load_data_from_file(self) -> None:
         """
@@ -283,11 +288,7 @@ class Ledger:
             account.spent += expense.quantity * fraction
 
         if self.track_history:
-            self.history["total_expenses_t"].append(expense.date)
-            self.history["total_expenses_q"].append(sum(a.spent for a in self.accounts.values()))
-            for m in self.members:
-                self.history[f"account_{m}_t"].append(expense.date)
-                self.history[f"account_{m}_q"].append(self.accounts[m].paid)
+            self._update_history(expense)
 
     def add_transfer(self, transfer: Transfer) -> None:
         """
@@ -313,11 +314,7 @@ class Ledger:
         recipient_account.paid -= transfer.quantity
 
         if self.track_history:
-            self.history["total_expenses_t"].append(transfer.date)
-            self.history["total_expenses_q"].append(sum(a.spent for a in self.accounts.values()))
-            for m in self.members:
-                self.history[f"account_{m}_t"].append(transfer.date)
-                self.history[f"account_{m}_q"].append(self.accounts[m].paid)
+            self._update_history(transfer)
 
     def calculate_balance(self) -> list[Transfer]:
         """

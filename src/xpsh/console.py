@@ -71,18 +71,17 @@ class plotextMixin(JupyterMixin):
 
 
 def _balance_history_plot(width: int, height: int, ledger: Ledger, title: str) -> str:
-    t = plt.datetimes_to_string(ledger.history["total_expenses_t"])
-    q = ledger.history["total_expenses_q"]
+    t = plt.datetimes_to_string(ledger.history["dates"])
+    exp = ledger.history["total_expenses"]
     colors = [c for _, c in zip(ledger.members, itertools.cycle(COLOR_PALETTE))]
 
     plt.date_form("d/m/Y")
     plt.clf()
     plt.plotsize(width=width, height=height)
     plt.theme("pro")
-    plt.plot(t, q, label="Total expenses", color="white", marker="fhd")
+    plt.plot(t, exp, label="Total expenses", color="white", marker="fhd")
     for m, c in zip(ledger.members, colors):
-        t = plt.datetimes_to_string(ledger.history[f"account_{m}_t"])
-        q = ledger.history[f"account_{m}_q"]
+        q = ledger.history[f"account_{m}_paid"]
         if not t:
             continue
 
