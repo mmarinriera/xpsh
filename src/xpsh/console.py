@@ -60,40 +60,21 @@ class AssignmentDictRenderer:
         return Text(", ").join(text_elements)
 
 
-def _stacked_bar_plot(
-    width: int, dates: list[str], series: dict[str, list[float]], colors: list[int], title: str
-) -> str:
-    plt.clf()
-    labels = list(series.keys())
-    y = list(series.values())
-    plt.simple_stacked_bar(dates, y, labels=labels, colors=colors, width=width, title=title)
-    out: str = plt.build()
-
-    return out
-
-
 class plotextMixin(JupyterMixin):
-    def __init__(self, dates: list[str], series: dict[str, list[float]], title: str) -> None:
+    def __init__(self, plot_canvas: str) -> None:
         self.decoder = AnsiDecoder()
-        self.dates = dates
-        self.series = series
-        self.title = title
+        self.canvas = plot_canvas
 
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
-        self.width = options.max_width or console.width
-        colors = [c for _, c in zip(self.series.keys(), itertools.cycle(COLOR_PALETTE))]
-        canvas = _stacked_bar_plot(
-            self.width - 2 * PLOT_PAD[1], self.dates, self.series, title=self.title, colors=colors
-        )
-        self.rich_canvas = Group(*self.decoder.decode(canvas))
+        self.rich_canvas = Group(*self.decoder.decode(self.canvas))
         yield self.rich_canvas
 
 
-def _balance_history_plot(width: int, height: int, ledger: Ledger, title: str, colors: list[int]) -> str:
+def _balance_history_plot(width: int, height: int, ledger: Ledger, title: str) -> str:
     t = plt.datetimes_to_string(ledger.history["total_expenses_t"])
     q = ledger.history["total_expenses_q"]
+    colors = [c for _, c in zip(ledger.members, itertools.cycle(COLOR_PALETTE))]
 
-    logger.debug(f"w {width},h {height}")
     plt.date_form("d/m/Y")
     plt.clf()
     plt.plotsize(width=width, height=height)
@@ -111,28 +92,6 @@ def _balance_history_plot(width: int, height: int, ledger: Ledger, title: str, c
     out: str = plt.build()
 
     return out
-
-
-class plotextMixinBalance(JupyterMixin):
-    def __init__(self, ledger: Ledger, title: str) -> None:
-        self.decoder = AnsiDecoder()
-        self.ledger = ledger
-        self.title = title
-
-    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
-        self.width = options.max_width or console.width
-        self.height = options.max_height or console.height
-
-        colors = [c for _, c in zip(self.ledger.members, itertools.cycle(COLOR_PALETTE))]
-        canvas = _balance_history_plot(
-            self.width - 2 * PLOT_PAD[1],
-            (self.height - 2 * PLOT_PAD[0]) // 2,
-            self.ledger,
-            title=self.title,
-            colors=colors,
-        )
-        self.rich_canvas = Group(*self.decoder.decode(canvas))
-        yield self.rich_canvas
 
 
 def print_balance(ledger: Ledger, plot: bool = False) -> None:
@@ -175,11 +134,32 @@ def print_balance(ledger: Ledger, plot: bool = False) -> None:
         )
 
     console.print(settle)
-    if plot:
-        console.print(Padding(plotextMixinBalance(ledger, "Ledger balance history"), pad=PLOT_PAD))
+    if not plot:
+        return
+
+    canvas = _balance_history_plot(
+        console.width - 2 * PLOT_PAD[1],
+        (console.height - 2 * PLOT_PAD[0]) // 2,
+        ledger,
+        title="Ledger balance history",
+    )
+
+    console.print(Padding(plotextMixin(plot_canvas=canvas), pad=PLOT_PAD))
 
 
-def _build_expense_plot(entries: list[LedgerEntry], members: list[str], grouped: str) -> plotextMixin:
+def _stacked_bar_plot(width: int, dates: list[str], series: dict[str, list[float]], title: str) -> str:
+    colors = [c for _, c in zip(series.keys(), itertools.cycle(COLOR_PALETTE))]
+
+    plt.clf()
+    labels = list(series.keys())
+    y = list(series.values())
+    plt.simple_stacked_bar(dates, y, labels=labels, colors=colors, width=width, title=title)
+    out: str = plt.build()
+
+    return out
+
+
+def _build_expense_plot(width: int, entries: list[LedgerEntry], members: list[str], grouped: str) -> plotextMixin:
     if grouped == "day":
         key = lambda e: e.date.strftime("%d/%m/%Y")
     elif grouped == "month":
@@ -198,7 +178,10 @@ def _build_expense_plot(entries: list[LedgerEntry], members: list[str], grouped:
         for m, v in aggregate.items():
             series[m].append(v)
 
-    return plotextMixin(dates=dates, series=series, title=f"Expense history grouped by {grouped}")
+    canvas = _stacked_bar_plot(
+        width=width - 2 * PLOT_PAD[1], dates=dates, series=series, title=f"Expense history grouped by {grouped}"
+    )
+    return plotextMixin(plot_canvas=canvas)
 
 
 def print_entries(ledger: Ledger, n_last_entries: int | None, plot: bool, grouped: str) -> None:
@@ -248,7 +231,9 @@ def print_entries(ledger: Ledger, n_last_entries: int | None, plot: bool, groupe
     console = Console()
     console.print(entry_table)
     if plot:
-        console.print(Padding(_build_expense_plot(entries, ledger.members, grouped=grouped), pad=PLOT_PAD))
+        console.print(
+            Padding(_build_expense_plot(console.width, entries, ledger.members, grouped=grouped), pad=PLOT_PAD)
+        )
 
 
 def print_examples(examples_dict: dict[str, str]) -> None:
