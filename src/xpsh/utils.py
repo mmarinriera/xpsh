@@ -1,0 +1,3 @@
+COLOR_OWES = "red"
+COLOR_IS_OWED = "green"
+COLOR_TRANSFER_TYPE = "cyan"

@@ -1,3 +1,4 @@
+import itertools
 import os
 from pathlib import Path
 
@@ -8,7 +9,7 @@ from xpsh import Ledger
 from xpsh import LedgerEntry
 from xpsh import Transfer
 from xpsh import get_version
-from xpsh.scripts import utils
+from xpsh import utils
 
 DATE_FMT = "%d/%m/%Y"
 DATE_INPUT_FMT = "DD/MM/YYYY"
@@ -25,6 +26,10 @@ COLOR_PALETTE = [
 ]
 COLOR_TRANSFER_TYPE = "#26f0ff"
 COLOR_REIMBURSEMENT_TYPE = "#00c817"
+
+
+def _build_member_color_map(members: list[str], color_palette: list[str]) -> dict[str, str]:
+    return dict(zip(members, itertools.cycle(color_palette)))
 
 
 def _parse_calculator_input(expression: str) -> float:
@@ -135,7 +140,7 @@ def _format_assignment(entry: LedgerEntry, member_color_map: dict[str, str]) -> 
 
 def _show_last_entries(ledger: Ledger, n_last_entries: int = 10) -> None:
     entries = ledger.entries[-n_last_entries:] if len(ledger.entries) > n_last_entries else ledger.entries
-    member_color_map = utils.build_member_color_map(ledger.members, COLOR_PALETTE)
+    member_color_map = _build_member_color_map(ledger.members, COLOR_PALETTE)
     date = []
     payer = []
     quantity = []
@@ -166,7 +171,7 @@ def _show_last_entries(ledger: Ledger, n_last_entries: int = 10) -> None:
 
 
 def _show_balance(ledger: Ledger) -> None:
-    member_color_map = utils.build_member_color_map(ledger.members, COLOR_PALETTE)
+    member_color_map = _build_member_color_map(ledger.members, COLOR_PALETTE)
     member = []
     spent = []
     paid = []
