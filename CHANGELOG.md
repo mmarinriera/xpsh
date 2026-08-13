@@ -2,6 +2,23 @@
 
 <!-- version list -->
 
+## v0.8.0 (2026-08-13)
+
+### Chores
+
+- Clean up
+  ([`41fbf43`](https://github.com/mmarinriera/xpsh/commit/41fbf431f5949169aa23de09354e1f78cb3d25b9))
+
+### Features
+
+- **cli**: `graph` flag in `balance` shows a graph of the history of the ledger balance.
+  ([#12](https://github.com/mmarinriera/xpsh/pull/12),
+  [`29be850`](https://github.com/mmarinriera/xpsh/commit/29be850809ddd7886e9f2eae9fcd09e2db9f7af6))
+
+- **cli**: Graphs ([#12](https://github.com/mmarinriera/xpsh/pull/12),
+  [`29be850`](https://github.com/mmarinriera/xpsh/commit/29be850809ddd7886e9f2eae9fcd09e2db9f7af6))
+
+
 ## v0.7.0 (2026-07-16)
 
 ### Chores
