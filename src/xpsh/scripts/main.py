@@ -140,8 +140,8 @@ def create(file_path: str, members: list[str], force: bool) -> None:
 
 @xpsh.command
 @click.argument("file_path", type=str)
-@click.option("-p", "--plot-entries", "plot", is_flag=True, help="Stack bar plot of expense history.")
-def balance(file_path: str, plot: bool) -> None:
+@click.option("-g", "--graph", "graph", is_flag=True, help="Show graph of balance history.")
+def balance(file_path: str, graph: bool) -> None:
     """
     Calculate and display ledger balance.
 
@@ -154,23 +154,23 @@ def balance(file_path: str, plot: bool) -> None:
     Run `xpsh examples` to check the available examples.
     """
     resolved_path = _resolve_input_path(file_path)
-    ledger = Ledger(file_path=resolved_path, track_history=plot)
+    ledger = Ledger(file_path=resolved_path, track_history=graph)
     logger.info("Ledger loaded from file")
-    console.print_balance(ledger, plot)
+    console.print_balance(ledger, graph)
 
 
 @xpsh.command
 @click.argument("file_path", type=str)
 @click.option("-n", "--n-last-entries", "n_last_entries", default=None, type=int, help="Show N most recent expenses.")
-@click.option("-p", "--plot-entries", "plot", is_flag=True, help="Stack bar plot of expense history.")
+@click.option("-g", "--graph", "graph", is_flag=True, help="Show stacked bar graph of expense history.")
 @click.option(
     "--grouped-by",
     "grouped",
     type=click.Choice(["day", "month"]),
     default="month",
-    help="How to aggregate expenses in plot.",
+    help="How to aggregate expenses in graph.",
 )
-def expenses(file_path: str, n_last_entries: int | None, plot: bool, grouped: str) -> None:
+def expenses(file_path: str, n_last_entries: int | None, graph: bool, grouped: str) -> None:
     """
     List and display ledger entries.
 
@@ -185,7 +185,7 @@ def expenses(file_path: str, n_last_entries: int | None, plot: bool, grouped: st
     ledger = Ledger(file_path=resolved_path)
     logger.info("Ledger loaded from file")
 
-    console.print_entries(ledger, n_last_entries, plot, grouped)
+    console.print_entries(ledger, n_last_entries, graph, grouped)
 
 
 @xpsh.command
