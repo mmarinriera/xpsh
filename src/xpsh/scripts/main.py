@@ -185,7 +185,7 @@ def expenses(file_path: str, n_last_entries: int | None, graph: bool, grouped: s
     ledger = Ledger(file_path=resolved_path)
     logger.info("Ledger loaded from file")
 
-    console.print_entries(ledger, n_last_entries, graph, grouped)
+    console.print_expenses(ledger, n_last_entries, graph, grouped)
 
 
 @xpsh.command

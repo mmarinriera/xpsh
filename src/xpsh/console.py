@@ -70,6 +70,44 @@ class plotextMixin(JupyterMixin):
         yield self.rich_canvas
 
 
+def _print_entries_table(entries: list[LedgerEntry], color_map: dict[str, str]) -> Table:
+    entry_table = Table(title="Entries", title_justify="left")
+    entry_table.add_column("Type", justify="right")
+    entry_table.add_column("Date", justify="right")
+    entry_table.add_column("Paid by", justify="right")
+    entry_table.add_column("Quantity", justify="right")
+    entry_table.add_column("Concept", justify="right")
+    entry_table.add_column("Assignment / Recipient", justify="left")
+
+    for entry in entries:
+        if isinstance(entry, Expense):
+            entry_type = Text("Expense") if entry.quantity >= 0.0 else Text("Reimbursement")
+            quantity = (
+                Text(f"{entry.quantity:.2f}")
+                if entry.quantity >= 0.0
+                else Text(f"{-entry.quantity:.2f}", style=utils.COLOR_IS_OWED)
+            )
+            assignment = AssignmentDictRenderer(entry.assignment, color_map)
+            concept = Text(entry.concept)
+        elif isinstance(entry, Transfer):
+            entry_type = Text("Transfer", style=utils.COLOR_TRANSFER_TYPE)
+            quantity = Text(f"{entry.quantity:.2f}", style=utils.COLOR_TRANSFER_TYPE)
+            assignment = Text(entry.recipient, style=color_map[entry.recipient])
+            concept = Text("-")
+        else:
+            raise ValueError(f"Unknown entry type (should never happen). {entry}.")
+
+        entry_table.add_row(
+            entry_type,
+            entry.date.strftime(DATE_OUT_FMT),
+            Text(entry.payer, style=color_map[entry.payer]),
+            quantity,
+            concept,
+            assignment,
+        )
+    return entry_table
+
+
 def _balance_history_plot(width: int, height: int, ledger: Ledger, title: str) -> str:
     t = plt.datetimes_to_string(ledger.history["dates"])
     exp = ledger.history["total_expenses"]
@@ -183,7 +221,7 @@ def _build_expense_plot(width: int, entries: list[LedgerEntry], members: list[st
     return plotextMixin(plot_canvas=canvas)
 
 
-def print_entries(ledger: Ledger, n_last_entries: int | None, plot: bool, grouped: str) -> None:
+def print_expenses(ledger: Ledger, n_last_entries: int | None, plot: bool, grouped: str) -> None:
     """Pretty print ledger entries in terminal using rich text."""
     if n_last_entries is not None and n_last_entries < len(ledger.entries):
         entries = ledger.entries[-n_last_entries:]
@@ -192,43 +230,8 @@ def print_entries(ledger: Ledger, n_last_entries: int | None, plot: bool, groupe
 
     name_color_map = _build_member_color_map(ledger.members, COLOR_PALETTE)
 
-    entry_table = Table(title="Entries", title_justify="left")
-    entry_table.add_column("Type", justify="right")
-    entry_table.add_column("Date", justify="right")
-    entry_table.add_column("Paid by", justify="right")
-    entry_table.add_column("Quantity", justify="right")
-    entry_table.add_column("Concept", justify="right")
-    entry_table.add_column("Assignment / Recipient", justify="left")
-
-    for entry in entries:
-        if isinstance(entry, Expense):
-            entry_type = Text("Expense") if entry.quantity >= 0.0 else Text("Reimbursement")
-            quantity = (
-                Text(f"{entry.quantity:.2f}")
-                if entry.quantity >= 0.0
-                else Text(f"{-entry.quantity:.2f}", style=utils.COLOR_IS_OWED)
-            )
-            assignment = AssignmentDictRenderer(entry.assignment, name_color_map)
-            concept = Text(entry.concept)
-        elif isinstance(entry, Transfer):
-            entry_type = Text("Transfer", style=utils.COLOR_TRANSFER_TYPE)
-            quantity = Text(f"{entry.quantity:.2f}", style=utils.COLOR_TRANSFER_TYPE)
-            assignment = Text(entry.recipient, style=name_color_map[entry.recipient])
-            concept = Text("-")
-        else:
-            raise ValueError(f"Unknown entry type (should never happen). {entry}.")
-
-        entry_table.add_row(
-            entry_type,
-            entry.date.strftime(DATE_OUT_FMT),
-            Text(entry.payer, style=name_color_map[entry.payer]),
-            quantity,
-            concept,
-            assignment,
-        )
-
     console = Console()
-    console.print(entry_table)
+    console.print(_print_entries_table(entries, name_color_map))
     if plot:
         console.print(
             Padding(_build_expense_plot(console.width, entries, ledger.members, grouped=grouped), pad=PLOT_PAD)
