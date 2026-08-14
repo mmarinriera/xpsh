@@ -133,6 +133,53 @@ def test_examples(subtests: pytest.Subtests) -> None:
         assert result.exit_code == 0
 
 
+def test_search(example_search_file_path: Path, subtests: pytest.Subtests) -> None:
+    TARGET_OUTPUT = """Entries                                                                                          
+┏━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Index ┃     Type ┃       Date ┃ Paid by ┃ Quantity ┃         Concept ┃ Assignment / Recipient ┃
+┡━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
+│     3 │  Expense │ 03/01/2000 │       A │    20.00 │ Even more stuff │ A=50.00%, B=50.00%     │
+│     4 │ Transfer │ 03/01/2000 │       A │    10.00 │               - │ B                      │
+│     6 │  Expense │ 05/01/2000 │       A │    20.00 │  And more stuff │ A=50.00%, B=50.00%     │
+└───────┴──────────┴────────────┴─────────┴──────────┴─────────────────┴────────────────────────┘
+"""
+
+    runner = CliRunner()
+    result = runner.invoke(
+        xpsh,
+        [
+            "search",
+            str(example_search_file_path),
+            "A",
+            "-c",
+            "stuff",
+            "--from",
+            "02/01/2000",
+            "--until",
+            "05/01/2000",
+            "--include-transfers",
+        ],
+    )
+    print(result.output)
+    with subtests.test("Test cli search exitcode."):
+        assert result.exit_code == 0
+    with subtests.test("Test cli search console output"):
+        assert result.output == TARGET_OUTPUT
+
+
+def test_search_no_hits(example_search_file_path: Path, subtests: pytest.Subtests) -> None:
+    TARGET_OUTPUT = """No entries found matching the criteria.
+"""
+
+    runner = CliRunner()
+    result = runner.invoke(xpsh, ["search", str(example_search_file_path), "A", "-c", "something"])
+    print(result.output)
+    with subtests.test("Test cli search exitcode."):
+        assert result.exit_code == 0
+    with subtests.test("Test cli search console output"):
+        assert result.output == TARGET_OUTPUT
+
+
 def test_add_expense(example_file_path: Path, subtests: pytest.Subtests) -> None:
     TARGET_FILE_CONTENT = """A,B
 E,01/01/2000,A,10.0,Stuff,A:0.5,B:0.5

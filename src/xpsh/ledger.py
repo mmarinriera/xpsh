@@ -311,7 +311,7 @@ class Ledger:
             filtered_entries = [
                 (i, e)
                 for i, e in filtered_entries
-                if isinstance(e, Transfer) or (isinstance(e, Expense) and concept in e.concept)
+                if isinstance(e, Transfer) or (isinstance(e, Expense) and concept in e.concept.lower())
             ]
 
         return filtered_entries
