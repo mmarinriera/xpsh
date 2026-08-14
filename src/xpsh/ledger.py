@@ -291,8 +291,13 @@ class Ledger:
         Returns:
             Filtered list of ledger entries.
 
+        Raises:
+            ValueError: If payer is not a valid member name.
+
         """
-        idx = list(range(len(self.entries)))
+        if payer not in self.members:
+            raise ValueError(f"Payer {payer} doesn't exist.")
+
         filter_date: Callable[[LedgerEntry], bool] = lambda x: True
         if start_date is not None:
             if end_date is not None:
@@ -302,7 +307,7 @@ class Ledger:
         elif end_date is not None:
             filter_date = lambda x: x.date <= end_date
 
-        filtered_entries: list[tuple[int, LedgerEntry]] = [(i, e) for i, e in zip(idx, self.entries) if filter_date(e)]
+        filtered_entries: list[tuple[int, LedgerEntry]] = [(i, e) for i, e in self.indexed_entries if filter_date(e)]
         filtered_entries = [(i, e) for i, e in filtered_entries if e.payer == payer]
         if not include_transfers:
             filtered_entries = [(i, e) for i, e in filtered_entries if not isinstance(e, Transfer)]

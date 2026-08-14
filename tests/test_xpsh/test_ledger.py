@@ -210,6 +210,41 @@ Expenses are balanced."""
         assert str(ledger_0) == TARGET_REPR_BALANCED
 
 
+def test_search(tmp_path: Path, subtests: pytest.Subtests) -> None:
+    out_path = tmp_path / "out.txt"
+    ledger = Ledger(file_path=out_path, members=["A", "B"])
+    exp_0 = Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}, concept="Stuff", date=date(2000, 1, 1))
+    exp_1 = Expense(payer="B", quantity=10.0, assignment={"A": 1, "B": 1}, concept="Stuff", date=date(2000, 1, 2))
+    exp_2 = Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}, concept="Other", date=date(2000, 1, 3))
+    exp_3 = Expense(payer="B", quantity=10.0, assignment={"A": 1, "B": 1}, concept="Else", date=date(2000, 1, 4))
+    trans_0 = Transfer(payer="A", quantity=10.0, recipient="B", date=date(2000, 1, 2))
+
+    ledger.add_expense(exp_0)
+    ledger.add_expense(exp_1)
+    ledger.add_expense(exp_2)
+    ledger.add_expense(exp_3)
+    ledger.add_transfer(trans_0)
+
+    with subtests.test("Test ledger search by payer."):
+        assert ledger.search(payer="A") == [(0, exp_0), (2, exp_2)]
+
+    with subtests.test("Test ledger search by payer, filtered by date."):
+        assert ledger.search(payer="A", start_date=date(2000, 1, 2), end_date=date(2000, 1, 4)) == [(2, exp_2)]
+
+    with subtests.test("Test ledger search by payer, filtered by concept."):
+        assert ledger.search(payer="A", concept="stuff") == [(0, exp_0)]
+
+    with subtests.test("Test ledger search by payer, including transfers."):
+        assert ledger.search(payer="A", include_transfers=True) == [(0, exp_0), (2, exp_2), (4, trans_0)]
+
+    with subtests.test("Test ledger search by payer, no hits."):
+        assert ledger.search(payer="A", concept="Spam") == []
+
+    with subtests.test("Test ledger search by payer, no hits."):
+        with pytest.raises(ValueError, match="Payer C doesn't exist."):
+            ledger.search(payer="C")
+
+
 def test_add_expense(tmp_path: Path, subtests: pytest.Subtests) -> None:
     out_path = tmp_path / "out.txt"
     ledger = Ledger(file_path=out_path, members=["A", "B"])
