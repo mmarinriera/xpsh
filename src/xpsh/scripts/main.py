@@ -433,3 +433,41 @@ def add_transfer(
 
     ledger.save_to_file()
     logger.info("Updated ledger saved to file.")
+
+
+@xpsh.command
+@click.argument("file_path", type=str)
+@click.argument("index", type=int)
+@click.option("-y", "--yes", "yes", is_flag=True, help="Confirm deletion of entry without input prompt.")
+def delete_entry(file_path: str, index: int, yes: bool) -> None:
+    """
+    Delete an entry from the ledger.
+
+    FILE_PATH is the path to the ledger file to be loaded.
+
+    INDEX is the number used to identify the entry.
+
+    TIP! Use "xpsh expenses" or "xpsh search" to find which index corresponds to the entry you are looking for.
+
+    """
+    resolved_path = _resolve_input_path(file_path)
+    ledger = Ledger(file_path=resolved_path)
+    logger.info("Ledger loaded from file")
+
+    try:
+        entry = ledger.get_entry(index)
+    except ValueError:
+        logger.critical(f"Index {index} does not correspond to a valid entry.")
+        sys.exit(1)
+
+    console.print_single_entry(ledger, index, entry)
+    confirm: str = click.prompt("Are you sure you want to delete this entry?[y|n]", default="n") if not yes else "y"
+
+    if confirm.lower() != "y":
+        logger.info("Action cancelled.")
+        sys.exit(0)
+
+    ledger.delete_entry(index)
+    ledger.save_to_file()
+    logger.info("Entry deleted from ledger.")
+    logger.warning("Entries indexing has changed after changed. Check indexes before deleting the next entry!")

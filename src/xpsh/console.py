@@ -71,8 +71,8 @@ class plotextMixin(JupyterMixin):
         yield self.rich_canvas
 
 
-def _print_entries_table(entries: list[IndexedLedgerEntry], color_map: dict[str, str]) -> Table:
-    entry_table = Table(title="Entries", title_justify="left")
+def _print_entries_table(entries: list[IndexedLedgerEntry], color_map: dict[str, str], title: str = "Entries") -> Table:
+    entry_table = Table(title=title, title_justify="left", title_style="bold")
     entry_table.add_column("Index", justify="right")
     entry_table.add_column("Type", justify="right")
     entry_table.add_column("Date", justify="right")
@@ -252,6 +252,12 @@ def print_search_entries(ledger: Ledger, entries: list[IndexedLedgerEntry]) -> N
         return
 
     console.print(_print_entries_table(entries, name_color_map))
+
+
+def print_single_entry(ledger: Ledger, index: int, entry: LedgerEntry) -> None:
+    name_color_map = _build_member_color_map(ledger.members, COLOR_PALETTE)
+    console = Console()
+    console.print(_print_entries_table([(index, entry)], name_color_map, title="Selected entry"))
 
 
 def print_examples(examples_dict: dict[str, str]) -> None:

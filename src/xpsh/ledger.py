@@ -321,6 +321,25 @@ class Ledger:
 
         return filtered_entries
 
+    def get_entry(self, index: int) -> LedgerEntry:
+        """
+        Return ledger entry corresponding to list index.
+
+        Args:
+            index: Entry index within list.
+
+        Returns:
+            Ledger entry.
+
+        Raises:
+            ValueError: If index is out of bounds.
+
+        """
+        if index < 0 or index > len(self.entries) - 1:
+            raise ValueError("Index out of bounds.")
+
+        return self.entries[index]
+
     def add_expense(self, expense: Expense) -> None:
         """
         Add expense to the ledger.
@@ -375,6 +394,22 @@ class Ledger:
 
         if self.track_history:
             self._update_history(transfer)
+
+    def delete_entry(self, index: int) -> None:
+        """
+        Delete ledger entry corresponding to list index.
+
+        Args:
+            index: Entry index within list.
+
+        Raises:
+            ValueError: If index is out of bounds.
+
+        """
+        if index < 0 or index > len(self.entries) - 1:
+            raise ValueError("Index out of bounds.")
+
+        self.entries.pop(index)
 
     def calculate_balance(self) -> list[Transfer]:
         """
