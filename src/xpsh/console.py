@@ -18,6 +18,7 @@ from xpsh import LedgerEntry
 from xpsh import Transfer
 from xpsh import utils
 from xpsh.ledger import DATE_OUT_FMT
+from xpsh.ledger import IndexedLedgerEntry
 
 logger = logging.getLogger(__name__)
 
@@ -70,8 +71,9 @@ class plotextMixin(JupyterMixin):
         yield self.rich_canvas
 
 
-def _print_entries_table(entries: list[LedgerEntry], color_map: dict[str, str]) -> Table:
+def _print_entries_table(entries: list[IndexedLedgerEntry], color_map: dict[str, str]) -> Table:
     entry_table = Table(title="Entries", title_justify="left")
+    entry_table.add_column("Index", justify="right")
     entry_table.add_column("Type", justify="right")
     entry_table.add_column("Date", justify="right")
     entry_table.add_column("Paid by", justify="right")
@@ -79,7 +81,7 @@ def _print_entries_table(entries: list[LedgerEntry], color_map: dict[str, str]) 
     entry_table.add_column("Concept", justify="right")
     entry_table.add_column("Assignment / Recipient", justify="left")
 
-    for entry in entries:
+    for idx, entry in entries:
         if isinstance(entry, Expense):
             entry_type = Text("Expense") if entry.quantity >= 0.0 else Text("Reimbursement")
             quantity = (
@@ -98,6 +100,7 @@ def _print_entries_table(entries: list[LedgerEntry], color_map: dict[str, str]) 
             raise ValueError(f"Unknown entry type (should never happen). {entry}.")
 
         entry_table.add_row(
+            str(idx),
             entry_type,
             entry.date.strftime(DATE_OUT_FMT),
             Text(entry.payer, style=color_map[entry.payer]),
@@ -224,23 +227,30 @@ def _build_expense_plot(width: int, entries: list[LedgerEntry], members: list[st
 def print_expenses(ledger: Ledger, n_last_entries: int | None, plot: bool, grouped: str) -> None:
     """Pretty print ledger entries in terminal using rich text."""
     if n_last_entries is not None and n_last_entries < len(ledger.entries):
-        entries = ledger.entries[-n_last_entries:]
+        idx_entries = ledger.indexed_entries[-n_last_entries:]
     else:
-        entries = ledger.entries
+        idx_entries = ledger.indexed_entries
 
     name_color_map = _build_member_color_map(ledger.members, COLOR_PALETTE)
 
     console = Console()
-    console.print(_print_entries_table(entries, name_color_map))
+    console.print(_print_entries_table(idx_entries, name_color_map))
     if plot:
         console.print(
-            Padding(_build_expense_plot(console.width, entries, ledger.members, grouped=grouped), pad=PLOT_PAD)
+            Padding(
+                _build_expense_plot(console.width, [e for _, e in idx_entries], ledger.members, grouped=grouped),
+                pad=PLOT_PAD,
+            )
         )
 
 
-def print_search_entries(ledger: Ledger, entries: list[LedgerEntry]) -> None:
+def print_search_entries(ledger: Ledger, entries: list[IndexedLedgerEntry]) -> None:
     name_color_map = _build_member_color_map(ledger.members, COLOR_PALETTE)
     console = Console()
+    if not entries:
+        console.print("No entries found matching the criteria.")
+        return
+
     console.print(_print_entries_table(entries, name_color_map))
 
 

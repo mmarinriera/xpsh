@@ -137,6 +137,9 @@ class Transfer:
         return ",".join([self.date.strftime(DATE_OUT_FMT), self.payer, str(self.quantity), self.recipient])
 
 
+IndexedLedgerEntry = tuple[int, LedgerEntry]
+
+
 def _member_list_sanity_check(members: list[str]) -> None:
     """Ensures there's more than one member, and there's no duplicate names."""
     if len(members) <= 1:
@@ -175,6 +178,11 @@ class Ledger:
     @property
     def settle_transfers(self) -> list[Transfer]:
         return self.calculate_balance()
+
+    @property
+    def indexed_entries(self) -> list[IndexedLedgerEntry]:
+        idx = list(range(len(self.entries)))
+        return [(i, e) for i, e in zip(idx, self.entries)]
 
     def __post_init__(self) -> None:
         self._lock = FileLock(self.file_path.with_name(f".{self.file_path.name}.lock"), timeout=LOCK_TIMEOUT_SECONDS)
@@ -269,9 +277,23 @@ class Ledger:
         start_date: datetime.date | None = None,
         end_date: datetime.date | None = None,
         include_transfers: bool = False,
-    ) -> list[LedgerEntry]:
-        """Return a list of ledger entries where `pattern` matches a substring of the entries `concept`"""
-        filter_date: Callable[[LedgerEntry], bool] | None = None
+    ) -> list[IndexedLedgerEntry]:
+        """
+        Return a list of ledger filtered by different criteria.
+
+        Args:
+            payer: Filter by payer name.
+            concept: Filter by concept. The value can be a substring of the concept.
+            start_date: Filter entries after that date.
+            end_date: Filter entries before that date.
+            include_transfers: Include any transfers matching the filtering criteria (except concept).
+
+        Returns:
+            Filtered list of ledger entries.
+
+        """
+        idx = list(range(len(self.entries)))
+        filter_date: Callable[[LedgerEntry], bool] = lambda x: True
         if start_date is not None:
             if end_date is not None:
                 filter_date = lambda x: x.date >= start_date and x.date <= end_date
@@ -280,17 +302,15 @@ class Ledger:
         elif end_date is not None:
             filter_date = lambda x: x.date <= end_date
 
-        filtered_entries: list[LedgerEntry] = (
-            [e for e in self.entries if filter_date(e)] if filter_date is not None else self.entries
-        )
-        filtered_entries = [e for e in filtered_entries if e.payer == payer]
+        filtered_entries: list[tuple[int, LedgerEntry]] = [(i, e) for i, e in zip(idx, self.entries) if filter_date(e)]
+        filtered_entries = [(i, e) for i, e in filtered_entries if e.payer == payer]
         if not include_transfers:
-            filtered_entries = [e for e in filtered_entries if not isinstance(e, Transfer)]
+            filtered_entries = [(i, e) for i, e in filtered_entries if not isinstance(e, Transfer)]
 
         if concept is not None:
             filtered_entries = [
-                e
-                for e in filtered_entries
+                (i, e)
+                for i, e in filtered_entries
                 if isinstance(e, Transfer) or (isinstance(e, Expense) and concept in e.concept)
             ]
 
