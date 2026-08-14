@@ -238,6 +238,12 @@ def print_expenses(ledger: Ledger, n_last_entries: int | None, plot: bool, group
         )
 
 
+def print_search_entries(ledger: Ledger, entries: list[LedgerEntry]) -> None:
+    name_color_map = _build_member_color_map(ledger.members, COLOR_PALETTE)
+    console = Console()
+    console.print(_print_entries_table(entries, name_color_map))
+
+
 def print_examples(examples_dict: dict[str, str]) -> None:
     table = Table(title="Examples", title_justify="left", show_lines=True)
     table.add_column("Keyword", justify="right")

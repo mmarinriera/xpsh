@@ -197,6 +197,35 @@ def examples() -> None:
 @xpsh.command
 @click.argument("file_path", type=str)
 @click.argument("payer", type=str)
+@click.option("-c", "--concept", "concept", type=str, default=None, help="Filter entries by concept.")
+@click.option("-f", "--from", "start_date", type=str, default=None, help="Filter entries later than date.")
+@click.option("-u", "--until", "end_date", type=str, default=None, help="Filter entries earlier than date.")
+@click.option("-t", "--include-transfers", "include_transfers", is_flag=True, help="Include transfers in the search.")
+def search(
+    file_path: str,
+    payer: str,
+    concept: str | None,
+    start_date: str | None,
+    end_date: str | None,
+    include_transfers: bool,
+) -> None:
+    """Search a ledger for an entry."""
+    resolved_path = _resolve_input_path(file_path)
+    ledger = Ledger(file_path=resolved_path)
+    logger.info("Ledger loaded from file")
+    entries = ledger.search(
+        payer=payer,
+        concept=concept,
+        start_date=datetime.datetime.strptime(start_date, DATE_OUT_FMT).date() if start_date is not None else None,
+        end_date=datetime.datetime.strptime(end_date, DATE_OUT_FMT).date() if end_date is not None else None,
+        include_transfers=include_transfers,
+    )
+    console.print_search_entries(ledger, entries)
+
+
+@xpsh.command
+@click.argument("file_path", type=str)
+@click.argument("payer", type=str)
 @click.argument("quantity", type=float)
 @click.argument("concept", type=str)
 @click.option(

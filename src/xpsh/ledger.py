@@ -1,5 +1,6 @@
 import datetime
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
@@ -260,6 +261,40 @@ class Ledger:
             for entry in self.entries:
                 identifier = "E" if isinstance(entry, Expense) else "T"
                 f.write(f"{identifier},{entry.to_output()}\n")
+
+    def search(
+        self,
+        payer: str,
+        concept: str | None = None,
+        start_date: datetime.date | None = None,
+        end_date: datetime.date | None = None,
+        include_transfers: bool = False,
+    ) -> list[LedgerEntry]:
+        """Return a list of ledger entries where `pattern` matches a substring of the entries `concept`"""
+        filter_date: Callable[[LedgerEntry], bool] | None = None
+        if start_date is not None:
+            if end_date is not None:
+                filter_date = lambda x: x.date >= start_date and x.date <= end_date
+            else:
+                filter_date = lambda x: x.date >= start_date
+        elif end_date is not None:
+            filter_date = lambda x: x.date <= end_date
+
+        filtered_entries: list[LedgerEntry] = (
+            [e for e in self.entries if filter_date(e)] if filter_date is not None else self.entries
+        )
+        filtered_entries = [e for e in filtered_entries if e.payer == payer]
+        if not include_transfers:
+            filtered_entries = [e for e in filtered_entries if not isinstance(e, Transfer)]
+
+        if concept is not None:
+            filtered_entries = [
+                e
+                for e in filtered_entries
+                if isinstance(e, Transfer) or (isinstance(e, Expense) and concept in e.concept)
+            ]
+
+        return filtered_entries
 
     def add_expense(self, expense: Expense) -> None:
         """
