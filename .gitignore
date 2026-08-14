@@ -21,3 +21,6 @@ wheels/
 
 # tox
 .tox/
+
+# example ledger lock files
+src/resources/*.lock
