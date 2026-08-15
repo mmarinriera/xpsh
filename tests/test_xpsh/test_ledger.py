@@ -245,6 +245,24 @@ def test_search(tmp_path: Path, subtests: pytest.Subtests) -> None:
             ledger.search(payer="C")
 
 
+def test_get_entry(tmp_path: Path, subtests: pytest.Subtests) -> None:
+    out_path = tmp_path / "out.txt"
+    ledger = Ledger(file_path=out_path, members=["A", "B"])
+    exp_0 = Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}, concept="Stuff", date=date(2000, 1, 1))
+    exp_1 = Expense(payer="B", quantity=10.0, assignment={"A": 1, "B": 1}, concept="Stuff", date=date(2000, 1, 2))
+    trans_0 = Transfer(payer="A", quantity=10.0, recipient="B", date=date(2000, 1, 2))
+
+    ledger.add_expense(exp_0)
+    ledger.add_expense(exp_1)
+    ledger.add_transfer(trans_0)
+
+    with subtests.test("Get entry"):
+        assert ledger.get_entry(1) == exp_1
+
+    with subtests.test("Get entry out of bounds"), pytest.raises(ValueError, match="Index out of bounds."):
+        ledger.delete_entry(3)
+
+
 def test_add_expense(tmp_path: Path, subtests: pytest.Subtests) -> None:
     out_path = tmp_path / "out.txt"
     ledger = Ledger(file_path=out_path, members=["A", "B"])
@@ -365,6 +383,46 @@ def test_add_transfer(tmp_path: Path, subtests: pytest.Subtests) -> None:
     with subtests.test("Add transfer with unknown recipient."):
         with pytest.raises(ValueError, match="Transfer recipient not in members. 'C'"):
             ledger.add_transfer(Transfer(payer="A", quantity=5.0, recipient="C", date=GENERIC_DATE))
+
+
+def test_delete_entry(tmp_path: Path, subtests: pytest.Subtests) -> None:
+    out_path = tmp_path / "out.txt"
+    ledger = Ledger(file_path=out_path, members=["A", "B"])
+    exp_0 = Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}, concept="Stuff", date=date(2000, 1, 1))
+    exp_1 = Expense(payer="B", quantity=10.0, assignment={"A": 1, "B": 1}, concept="Stuff", date=date(2000, 1, 2))
+    trans_0 = Transfer(payer="A", quantity=10.0, recipient="B", date=date(2000, 1, 2))
+
+    ledger.add_expense(exp_0)
+    ledger.add_expense(exp_1)
+    ledger.add_transfer(trans_0)
+
+    ledger.delete_entry(1)
+    with subtests.test("Delete entry"):
+        assert ledger.entries == [exp_0, trans_0]
+
+    with subtests.test("Delete entry out of bounds"), pytest.raises(ValueError, match="Index out of bounds."):
+        ledger.delete_entry(2)
+
+
+def test_replace_entry(tmp_path: Path, subtests: pytest.Subtests) -> None:
+    out_path = tmp_path / "out.txt"
+    ledger = Ledger(file_path=out_path, members=["A", "B"])
+    exp_0 = Expense(payer="A", quantity=10.0, assignment={"A": 1, "B": 1}, concept="Stuff", date=date(2000, 1, 1))
+    exp_1 = Expense(payer="B", quantity=10.0, assignment={"A": 1, "B": 1}, concept="Stuff", date=date(2000, 1, 2))
+    trans_0 = Transfer(payer="A", quantity=10.0, recipient="B", date=date(2000, 1, 2))
+
+    exp_replace = Expense(payer="B", quantity=15.0, assignment={"A": 1, "B": 1}, concept="Stuff", date=date(2000, 1, 5))
+
+    ledger.add_expense(exp_0)
+    ledger.add_expense(exp_1)
+    ledger.add_transfer(trans_0)
+
+    ledger.replace_entry(1, exp_replace)
+    with subtests.test("Replace entry"):
+        assert ledger.entries[1] == exp_replace
+
+    with subtests.test("Replace entry out of bounds"), pytest.raises(ValueError, match="Index out of bounds."):
+        ledger.replace_entry(3, exp_replace)
 
 
 def test_calculate_balance(tmp_path: Path, subtests: pytest.Subtests) -> None:
