@@ -260,6 +260,12 @@ def print_single_entry(ledger: Ledger, index: int, entry: LedgerEntry) -> None:
     console.print(_print_entries_table([(index, entry)], name_color_map, title="Selected entry"))
 
 
+def print_entry_diff(entry: LedgerEntry, new_entry: LedgerEntry) -> None:
+    console = Console()
+    console.print(entry)
+    console.print(new_entry)
+
+
 def print_examples(examples_dict: dict[str, str]) -> None:
     table = Table(title="Examples", title_justify="left", show_lines=True)
     table.add_column("Keyword", justify="right")

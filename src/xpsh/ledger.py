@@ -411,6 +411,23 @@ class Ledger:
 
         self.entries.pop(index)
 
+    def replace_entry(self, index: int, entry: LedgerEntry) -> None:
+        """
+        Replace ledger entry in a specific list index.
+
+        Args:
+            index: Entry index within list.
+            entry: Entry to replace.
+
+        Raises:
+            ValueError: If index is out of bounds.
+
+        """
+        if index < 0 or index > len(self.entries) - 1:
+            raise ValueError("Index out of bounds.")
+
+        self.entries[index] = entry
+
     def calculate_balance(self) -> list[Transfer]:
         """
         Calculate a set of transfers between member that will balance the ledger.

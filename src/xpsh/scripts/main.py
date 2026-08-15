@@ -8,6 +8,7 @@ import click
 
 from xpsh import Expense
 from xpsh import Ledger
+from xpsh import LedgerEntry
 from xpsh import Transfer
 from xpsh import console
 from xpsh import get_resource
@@ -198,8 +199,12 @@ def examples() -> None:
 @click.argument("file_path", type=str)
 @click.argument("payer", type=str)
 @click.option("-c", "--concept", "concept", type=str, default=None, help="Filter entries by concept.")
-@click.option("-f", "--from", "start_date", type=str, default=None, help="Filter entries later than date.")
-@click.option("-u", "--until", "end_date", type=str, default=None, help="Filter entries earlier than date.")
+@click.option(
+    "-f", "--from", "start_date", type=str, default=None, help="Filter entries later than date ('dd/mm/yyy' format)."
+)
+@click.option(
+    "-u", "--until", "end_date", type=str, default=None, help="Filter entries earlier than date ('dd/mm/yyy' format)."
+)
 @click.option("-t", "--include-transfers", "include_transfers", is_flag=True, help="Include transfers in the search.")
 def search(
     file_path: str,
@@ -471,3 +476,88 @@ def delete_entry(file_path: str, index: int, yes: bool) -> None:
     ledger.save_to_file()
     logger.info("Entry deleted from ledger.")
     logger.warning("Entries indexing has changed after changed. Check indexes before deleting the next entry!")
+
+
+@xpsh.command
+@click.argument("file_path", type=str)
+@click.argument("index", type=int)
+@click.option("-p", "--payer", "payer", type=str, default=None, help="Edit the payer.")
+@click.option("-q", "--quantity", "quantity", type=float, default=None, help="Edit the quantity.")
+@click.option(
+    "-c", "--concept", "concept", type=str, default=None, help="Edit the concept (expense and reimbursement only)."
+)
+@click.option(
+    "-a",
+    "--assignment",
+    "assignment",
+    type=(str, float),
+    default=None,
+    multiple=True,
+    help="Edit the assignment.",
+)
+@click.option("-r", "--recipient", "recipient", type=str, default=None, help="Edit the recipient (transfers only).")
+@click.option("-d", "--date", "date_str", type=str, default=None, help="Edit the date ('dd/mm/yyy' format).")
+@click.option("-y", "--yes", "yes", is_flag=True, help="Confirm deletion of entry without input prompt.")
+def edit_entry(
+    file_path: str,
+    index: int,
+    payer: str | None,
+    quantity: float | None,
+    concept: str | None,
+    recipient: str | None,
+    assignment: list[tuple[str, float]] | None,
+    date_str: str | None,
+    yes: bool,
+) -> None:
+    """
+    Edit an entry from the ledger.
+
+    FILE_PATH is the path to the ledger file to be loaded.
+
+    INDEX is the number used to identify the entry.
+
+    TIP! Use "xpsh expenses" or "xpsh search" to find which index corresponds to the entry you are looking for.
+
+    """
+    resolved_path = _resolve_input_path(file_path)
+    ledger = Ledger(file_path=resolved_path)
+    logger.info("Ledger loaded from file")
+
+    try:
+        entry = ledger.get_entry(index)
+    except ValueError:
+        logger.critical(f"Index {index} does not correspond to a valid entry.")
+        sys.exit(1)
+
+    if payer is None:
+        payer = entry.payer
+
+    if quantity is None:
+        quantity = entry.quantity
+
+    date = datetime.datetime.strptime(date_str, DATE_OUT_FMT).date() if date_str is not None else entry.date
+
+    if isinstance(entry, Expense):
+        if concept is None:
+            concept = entry.concept
+        assignment_dict = {v[0]: v[1] for v in assignment} if assignment is not None else entry.assignment
+
+        new_entry: LedgerEntry = Expense(
+            payer=payer, quantity=quantity, concept=concept, assignment=assignment_dict, date=date
+        )
+
+    if isinstance(entry, Transfer):
+        if recipient is None:
+            recipient = entry.recipient
+        new_entry = Transfer(payer=payer, quantity=quantity, recipient=recipient, date=date)
+
+    console.print_entry_diff(entry, new_entry)
+
+    confirm: str = click.prompt("Are you sure you want to edit this entry?[y|n]", default="n") if not yes else "y"
+    if confirm.lower() != "y":
+        logger.info("Action cancelled.")
+        sys.exit(0)
+
+    ledger.replace_entry(index, new_entry)
+    ledger.save_to_file()
+    logger.info("Entry modified.")
