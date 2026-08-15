@@ -491,7 +491,7 @@ def delete_entry(file_path: str, index: int, yes: bool) -> None:
     "--assignment",
     "assignment",
     type=(str, float),
-    default=None,
+    default=[],
     multiple=True,
     help="Edit the assignment.",
 )
@@ -540,7 +540,11 @@ def edit_entry(
     if isinstance(entry, Expense):
         if concept is None:
             concept = entry.concept
-        assignment_dict = {v[0]: v[1] for v in assignment} if assignment is not None else entry.assignment
+        assignment_dict = {v[0]: v[1] for v in assignment} if assignment else entry.assignment
+
+        # Ensure that a reimbursment entry cannot be switched into an expense by making the quantity positive.
+        if entry.quantity < 0.0 and quantity > 0.0:
+            quantity = -quantity
 
         new_entry: LedgerEntry = Expense(
             payer=payer, quantity=quantity, concept=concept, assignment=assignment_dict, date=date

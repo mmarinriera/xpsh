@@ -261,9 +261,107 @@ def print_single_entry(ledger: Ledger, index: int, entry: LedgerEntry) -> None:
 
 
 def print_entry_diff(entry: LedgerEntry, new_entry: LedgerEntry) -> None:
+
+    STYLE_DIFF_OLD = "bold red"
+    STYLE_DIFF_NEW = "bold green"
+    STYLE_NO_DIFF = ""
+
+    entry_table = Table(title="Entry Update", title_justify="left", title_style="bold")
+    entry_table.add_column("", justify="right")
+    entry_table.add_column("Type", justify="right")
+    entry_table.add_column("Date", justify="right")
+    entry_table.add_column("Paid by", justify="right")
+    entry_table.add_column("Quantity", justify="right")
+    entry_table.add_column("Concept", justify="right")
+    entry_table.add_column("Assignment / Recipient", justify="left")
+
+    if entry.date != new_entry.date:
+        current_date_style = STYLE_DIFF_OLD
+        new_date_style = STYLE_DIFF_NEW
+    else:
+        current_date_style = STYLE_NO_DIFF
+        new_date_style = STYLE_NO_DIFF
+
+    if entry.payer != new_entry.payer:
+        current_payer_style = STYLE_DIFF_OLD
+        new_payer_style = STYLE_DIFF_NEW
+    else:
+        current_payer_style = STYLE_NO_DIFF
+        new_payer_style = STYLE_NO_DIFF
+
+    if entry.quantity != new_entry.quantity:
+        current_quantity_style = STYLE_DIFF_OLD
+        new_quantity_style = STYLE_DIFF_NEW
+    else:
+        current_quantity_style = STYLE_NO_DIFF
+        new_quantity_style = STYLE_NO_DIFF
+
+    current_quantity = entry.quantity
+    new_quantity = new_entry.quantity
+
+    if isinstance(entry, Expense) and isinstance(new_entry, Expense):
+        entry_type = Text("Expense") if entry.quantity >= 0.0 else Text("Reimbursement")
+
+        current_quantity = abs(current_quantity)
+        new_quantity = abs(new_quantity)
+
+        if entry.assignment != new_entry.assignment:
+            current_assignment = AssignmentDictRenderer(entry.assignment, dict.fromkeys(entry.assignment.keys(), "red"))
+            new_assignment = AssignmentDictRenderer(
+                new_entry.assignment, dict.fromkeys(entry.assignment.keys(), "green")
+            )
+        else:
+            current_assignment = AssignmentDictRenderer(entry.assignment, dict.fromkeys(entry.assignment.keys(), ""))
+            new_assignment = AssignmentDictRenderer(new_entry.assignment, dict.fromkeys(entry.assignment.keys(), ""))
+
+        current_concept = entry.concept
+        new_concept = new_entry.concept
+        if current_concept != new_concept:
+            current_concept_style = STYLE_DIFF_OLD
+            new_concept_style = STYLE_DIFF_NEW
+        else:
+            current_concept_style = STYLE_NO_DIFF
+            new_concept_style = STYLE_NO_DIFF
+
+    elif isinstance(entry, Transfer) and isinstance(new_entry, Transfer):
+        entry_type = Text("Transfer")
+
+        if entry.recipient != new_entry.recipient:
+            current_assignment = Text(entry.recipient, style=STYLE_DIFF_OLD)
+            new_assignment = Text(new_entry.recipient, style=STYLE_DIFF_NEW)
+        else:
+            current_assignment = Text(entry.recipient, style=STYLE_NO_DIFF)
+            new_assignment = Text(new_entry.recipient, style=STYLE_NO_DIFF)
+
+        current_concept = "-"
+        new_concept = "-"
+        current_concept_style = STYLE_NO_DIFF
+        new_concept_style = STYLE_NO_DIFF
+
+    else:
+        raise ValueError("Current and updated entries should be of same type (this should not happen).")
+
+    entry_table.add_row(
+        Text("Current", style=STYLE_DIFF_OLD),
+        entry_type,
+        Text(entry.date.strftime(DATE_OUT_FMT), style=current_date_style),
+        Text(entry.payer, style=current_payer_style),
+        Text(f"{current_quantity:.2f}", style=current_quantity_style),
+        Text(current_concept, style=current_concept_style),
+        current_assignment,
+    )
+    entry_table.add_row(
+        Text("Updated", style=STYLE_DIFF_NEW),
+        entry_type,
+        Text(new_entry.date.strftime(DATE_OUT_FMT), style=new_date_style),
+        Text(new_entry.payer, style=new_payer_style),
+        Text(f"{new_quantity:.2f}", style=new_quantity_style),
+        Text(new_concept, style=new_concept_style),
+        new_assignment,
+    )
+
     console = Console()
-    console.print(entry)
-    console.print(new_entry)
+    console.print(entry_table)
 
 
 def print_examples(examples_dict: dict[str, str]) -> None:
