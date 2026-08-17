@@ -270,6 +270,35 @@ class Ledger:
                 identifier = "E" if isinstance(entry, Expense) else "T"
                 f.write(f"{identifier},{entry.to_output()}\n")
 
+    def _filter_by_date(
+        self, start_date: datetime.date | None, end_date: datetime.date | None
+    ) -> list[IndexedLedgerEntry]:
+        filter_date: Callable[[LedgerEntry], bool] = lambda x: True
+        if start_date is not None:
+            if end_date is not None:
+                filter_date = lambda x: x.date >= start_date and x.date <= end_date
+            else:
+                filter_date = lambda x: x.date >= start_date
+        elif end_date is not None:
+            filter_date = lambda x: x.date <= end_date
+
+        return [(i, e) for i, e in self.indexed_entries if filter_date(e)]
+
+    def _filter_by_payer(self, entries: list[IndexedLedgerEntry], payer: str) -> list[IndexedLedgerEntry]:
+        return [(i, e) for i, e in entries if e.payer == payer]
+
+    def _filter_transfers(self, entries: list[IndexedLedgerEntry], include_transfers: bool) -> list[IndexedLedgerEntry]:
+        return [(i, e) for i, e in entries if not isinstance(e, Transfer)] if not include_transfers else entries
+
+    def _filter_by_concept(self, entries: list[IndexedLedgerEntry], concept: str | None) -> list[IndexedLedgerEntry]:
+        if concept is not None:
+            return [
+                (i, e)
+                for i, e in entries
+                if isinstance(e, Transfer) or (isinstance(e, Expense) and concept in e.concept.lower())
+            ]
+        return entries
+
     def search(
         self,
         payer: str,
@@ -298,26 +327,10 @@ class Ledger:
         if payer not in self.members:
             raise ValueError(f"Payer {payer} doesn't exist.")
 
-        filter_date: Callable[[LedgerEntry], bool] = lambda x: True
-        if start_date is not None:
-            if end_date is not None:
-                filter_date = lambda x: x.date >= start_date and x.date <= end_date
-            else:
-                filter_date = lambda x: x.date >= start_date
-        elif end_date is not None:
-            filter_date = lambda x: x.date <= end_date
-
-        filtered_entries: list[tuple[int, LedgerEntry]] = [(i, e) for i, e in self.indexed_entries if filter_date(e)]
-        filtered_entries = [(i, e) for i, e in filtered_entries if e.payer == payer]
-        if not include_transfers:
-            filtered_entries = [(i, e) for i, e in filtered_entries if not isinstance(e, Transfer)]
-
-        if concept is not None:
-            filtered_entries = [
-                (i, e)
-                for i, e in filtered_entries
-                if isinstance(e, Transfer) or (isinstance(e, Expense) and concept in e.concept.lower())
-            ]
+        filtered_entries = self._filter_by_date(start_date, end_date)
+        filtered_entries = self._filter_by_payer(filtered_entries, payer=payer)
+        filtered_entries = self._filter_transfers(filtered_entries, include_transfers=include_transfers)
+        filtered_entries = self._filter_by_concept(filtered_entries, concept=concept)
 
         return filtered_entries
 

@@ -74,6 +74,63 @@ def _add_expense(
     logger.info("Updated ledger saved to file.")
 
 
+def _build_updated_expense(
+    current_entry: Expense,
+    payer: str,
+    quantity: float,
+    concept: str | None,
+    assignment: list[tuple[str, float]] | None,
+    date: datetime.date,
+) -> Expense:
+    if concept is None:
+        concept = current_entry.concept
+    assignment_dict = {n: v for n, v in assignment} if assignment else current_entry.assignment
+
+    # Ensure that a reimbursment entry cannot be switched into an expense by making the quantity positive.
+    if current_entry.quantity < 0.0 and quantity > 0.0:
+        quantity = -quantity
+
+    return Expense(payer=payer, quantity=quantity, concept=concept, assignment=assignment_dict, date=date)
+
+
+def _build_updated_transfer(
+    current_entry: Transfer,
+    payer: str,
+    quantity: float,
+    recipient: str | None,
+    date: datetime.date,
+) -> Transfer:
+    if recipient is None:
+        recipient = current_entry.recipient
+    return Transfer(payer=payer, quantity=quantity, recipient=recipient, date=date)
+
+
+def _build_updated_entry(
+    current_entry: LedgerEntry,
+    payer: str | None,
+    quantity: float | None,
+    concept: str | None,
+    assignment: list[tuple[str, float]] | None,
+    recipient: str | None,
+    date_str: str | None,
+) -> LedgerEntry:
+    if payer is None:
+        payer = current_entry.payer
+
+    if quantity is None:
+        quantity = current_entry.quantity
+
+    date = datetime.datetime.strptime(date_str, DATE_OUT_FMT).date() if date_str is not None else current_entry.date
+
+    if isinstance(current_entry, Expense):
+        new_entry: LedgerEntry = _build_updated_expense(current_entry, payer, quantity, concept, assignment, date)
+
+    if isinstance(current_entry, Transfer):
+        new_entry = _build_updated_transfer(current_entry, payer, quantity, recipient, date)
+
+    return new_entry
+
+
 def print_version(ctx: click.Context, _: Any, value: Any) -> None:
     """Click print version."""
     if not value or ctx.resilient_parsing:
@@ -529,31 +586,15 @@ def edit_entry(
         logger.critical(f"Index {index} does not correspond to a valid entry.")
         sys.exit(1)
 
-    if payer is None:
-        payer = entry.payer
-
-    if quantity is None:
-        quantity = entry.quantity
-
-    date = datetime.datetime.strptime(date_str, DATE_OUT_FMT).date() if date_str is not None else entry.date
-
-    if isinstance(entry, Expense):
-        if concept is None:
-            concept = entry.concept
-        assignment_dict = {v[0]: v[1] for v in assignment} if assignment else entry.assignment
-
-        # Ensure that a reimbursment entry cannot be switched into an expense by making the quantity positive.
-        if entry.quantity < 0.0 and quantity > 0.0:
-            quantity = -quantity
-
-        new_entry: LedgerEntry = Expense(
-            payer=payer, quantity=quantity, concept=concept, assignment=assignment_dict, date=date
-        )
-
-    if isinstance(entry, Transfer):
-        if recipient is None:
-            recipient = entry.recipient
-        new_entry = Transfer(payer=payer, quantity=quantity, recipient=recipient, date=date)
+    new_entry = _build_updated_entry(
+        entry,
+        payer=payer,
+        quantity=quantity,
+        concept=concept,
+        assignment=assignment,
+        recipient=recipient,
+        date_str=date_str,
+    )
 
     console.print_entry_diff(entry, new_entry)
 

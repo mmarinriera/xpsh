@@ -1,5 +1,6 @@
 import itertools
 import logging
+from typing import Any
 
 import plotext as plt
 from rich.ansi import AnsiDecoder
@@ -36,6 +37,10 @@ COLOR_PALETTE = [
 ]
 
 PLOT_PAD = (1, 2)
+
+STYLE_DIFF_OLD = "bold red"
+STYLE_DIFF_NEW = "bold green"
+STYLE_NO_DIFF = ""
 
 
 def _build_member_color_map(members: list[str], color_palette: list[int]) -> dict[str, str]:
@@ -260,21 +265,12 @@ def print_single_entry(ledger: Ledger, index: int, entry: LedgerEntry) -> None:
     console.print(_print_entries_table([(index, entry)], name_color_map, title="Selected entry"))
 
 
-def print_entry_diff(entry: LedgerEntry, new_entry: LedgerEntry) -> None:
-
-    STYLE_DIFF_OLD = "bold red"
-    STYLE_DIFF_NEW = "bold green"
-    STYLE_NO_DIFF = ""
-
-    entry_table = Table(title="Entry Update", title_justify="left", title_style="bold")
-    entry_table.add_column("", justify="right")
-    entry_table.add_column("Type", justify="right")
-    entry_table.add_column("Date", justify="right")
-    entry_table.add_column("Paid by", justify="right")
-    entry_table.add_column("Quantity", justify="right")
-    entry_table.add_column("Concept", justify="right")
-    entry_table.add_column("Assignment / Recipient", justify="left")
-
+def _diff_table_resolve_common_fields(
+    entry: LedgerEntry,
+    new_entry: LedgerEntry,
+    current_entry_table_input: dict[str, Any],
+    new_entry_table_input: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
     if entry.date != new_entry.date:
         current_date_style = STYLE_DIFF_OLD
         new_date_style = STYLE_DIFF_NEW
@@ -296,68 +292,126 @@ def print_entry_diff(entry: LedgerEntry, new_entry: LedgerEntry) -> None:
         current_quantity_style = STYLE_NO_DIFF
         new_quantity_style = STYLE_NO_DIFF
 
-    current_quantity = entry.quantity
-    new_quantity = new_entry.quantity
+    current_entry_table_input["date"] = Text(entry.date.strftime(DATE_OUT_FMT), style=current_date_style)
+    new_entry_table_input["date"] = Text(new_entry.date.strftime(DATE_OUT_FMT), style=new_date_style)
 
-    if isinstance(entry, Expense) and isinstance(new_entry, Expense):
-        entry_type = Text("Expense") if entry.quantity >= 0.0 else Text("Reimbursement")
+    current_entry_table_input["payer"] = Text(entry.payer, style=current_payer_style)
+    new_entry_table_input["payer"] = Text(new_entry.payer, style=new_payer_style)
 
-        current_quantity = abs(current_quantity)
-        new_quantity = abs(new_quantity)
+    current_entry_table_input["quantity"] = Text(f"{abs(entry.quantity):.2f}", style=current_quantity_style)
+    new_entry_table_input["quantity"] = Text(f"{abs(new_entry.quantity):.2f}", style=new_quantity_style)
 
-        if entry.assignment != new_entry.assignment:
-            current_assignment = AssignmentDictRenderer(entry.assignment, dict.fromkeys(entry.assignment.keys(), "red"))
-            new_assignment = AssignmentDictRenderer(
-                new_entry.assignment, dict.fromkeys(entry.assignment.keys(), "green")
-            )
-        else:
-            current_assignment = AssignmentDictRenderer(entry.assignment, dict.fromkeys(entry.assignment.keys(), ""))
-            new_assignment = AssignmentDictRenderer(new_entry.assignment, dict.fromkeys(entry.assignment.keys(), ""))
+    return current_entry_table_input, new_entry_table_input
 
-        current_concept = entry.concept
-        new_concept = new_entry.concept
-        if current_concept != new_concept:
-            current_concept_style = STYLE_DIFF_OLD
-            new_concept_style = STYLE_DIFF_NEW
-        else:
-            current_concept_style = STYLE_NO_DIFF
-            new_concept_style = STYLE_NO_DIFF
 
-    elif isinstance(entry, Transfer) and isinstance(new_entry, Transfer):
-        entry_type = Text("Transfer")
+def _diff_table_resolve_expense_fields(
+    entry: Expense,
+    new_entry: Expense,
+    current_entry_table_input: dict[str, Any],
+    new_entry_table_input: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    entry_type = "Expense" if entry.quantity >= 0.0 else "Reimbursement"
+    current_entry_table_input["type"] = Text(entry_type)
+    new_entry_table_input["type"] = Text(entry_type)
 
-        if entry.recipient != new_entry.recipient:
-            current_assignment = Text(entry.recipient, style=STYLE_DIFF_OLD)
-            new_assignment = Text(new_entry.recipient, style=STYLE_DIFF_NEW)
-        else:
-            current_assignment = Text(entry.recipient, style=STYLE_NO_DIFF)
-            new_assignment = Text(new_entry.recipient, style=STYLE_NO_DIFF)
+    if entry.assignment != new_entry.assignment:
+        current_entry_table_input["assignment"] = AssignmentDictRenderer(
+            entry.assignment, dict.fromkeys(entry.assignment.keys(), "red")
+        )
+        new_entry_table_input["assignment"] = AssignmentDictRenderer(
+            new_entry.assignment, dict.fromkeys(entry.assignment.keys(), "green")
+        )
+    else:
+        current_entry_table_input["assignment"] = AssignmentDictRenderer(
+            entry.assignment, dict.fromkeys(entry.assignment.keys(), "")
+        )
+        new_entry_table_input["assignment"] = AssignmentDictRenderer(
+            new_entry.assignment, dict.fromkeys(entry.assignment.keys(), "")
+        )
 
-        current_concept = "-"
-        new_concept = "-"
+    current_concept = entry.concept
+    new_concept = new_entry.concept
+    if current_concept != new_concept:
+        current_concept_style = STYLE_DIFF_OLD
+        new_concept_style = STYLE_DIFF_NEW
+    else:
         current_concept_style = STYLE_NO_DIFF
         new_concept_style = STYLE_NO_DIFF
 
+    current_entry_table_input["concept"] = Text(entry.concept, style=current_concept_style)
+    new_entry_table_input["concept"] = Text(new_entry.concept, style=new_concept_style)
+
+    return current_entry_table_input, new_entry_table_input
+
+
+def _diff_table_resolve_transfer_fields(
+    entry: Transfer,
+    new_entry: Transfer,
+    current_entry_table_input: dict[str, Any],
+    new_entry_table_input: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    current_entry_table_input["type"] = Text("Transfer")
+    new_entry_table_input["type"] = Text("Transfer")
+
+    if entry.recipient != new_entry.recipient:
+        current_entry_table_input["assignment"] = Text(entry.recipient, style=STYLE_DIFF_OLD)
+        new_entry_table_input["assignment"] = Text(new_entry.recipient, style=STYLE_DIFF_NEW)
+    else:
+        current_entry_table_input["assignment"] = Text(entry.recipient, style=STYLE_NO_DIFF)
+        new_entry_table_input["assignment"] = Text(new_entry.recipient, style=STYLE_NO_DIFF)
+
+    current_entry_table_input["concept"] = Text("-", style=STYLE_NO_DIFF)
+    new_entry_table_input["concept"] = Text("-", style=STYLE_NO_DIFF)
+
+    return current_entry_table_input, new_entry_table_input
+
+
+def print_entry_diff(entry: LedgerEntry, new_entry: LedgerEntry) -> None:
+    entry_table = Table(title="Entry Update", title_justify="left", title_style="bold")
+    entry_table.add_column("", justify="right")
+    entry_table.add_column("Type", justify="right")
+    entry_table.add_column("Date", justify="right")
+    entry_table.add_column("Paid by", justify="right")
+    entry_table.add_column("Quantity", justify="right")
+    entry_table.add_column("Concept", justify="right")
+    entry_table.add_column("Assignment / Recipient", justify="left")
+
+    current_entry_table_input: dict[str, Text] = {}
+    new_entry_table_input: dict[str, Text] = {}
+
+    current_entry_table_input, new_entry_table_input = _diff_table_resolve_common_fields(
+        entry, new_entry, current_entry_table_input, new_entry_table_input
+    )
+
+    if isinstance(entry, Expense) and isinstance(new_entry, Expense):
+        current_entry_table_input, new_entry_table_input = _diff_table_resolve_expense_fields(
+            entry, new_entry, current_entry_table_input, new_entry_table_input
+        )
+
+    elif isinstance(entry, Transfer) and isinstance(new_entry, Transfer):
+        current_entry_table_input, new_entry_table_input = _diff_table_resolve_transfer_fields(
+            entry, new_entry, current_entry_table_input, new_entry_table_input
+        )
     else:
         raise ValueError("Current and updated entries should be of same type (this should not happen).")
 
     entry_table.add_row(
         Text("Current", style=STYLE_DIFF_OLD),
-        entry_type,
-        Text(entry.date.strftime(DATE_OUT_FMT), style=current_date_style),
-        Text(entry.payer, style=current_payer_style),
-        Text(f"{current_quantity:.2f}", style=current_quantity_style),
-        Text(current_concept, style=current_concept_style),
-        current_assignment,
+        current_entry_table_input["type"],
+        current_entry_table_input["date"],
+        current_entry_table_input["payer"],
+        current_entry_table_input["quantity"],
+        current_entry_table_input["concept"],
+        current_entry_table_input["assignment"],
     )
     entry_table.add_row(
         Text("Updated", style=STYLE_DIFF_NEW),
-        entry_type,
-        Text(new_entry.date.strftime(DATE_OUT_FMT), style=new_date_style),
-        Text(new_entry.payer, style=new_payer_style),
-        Text(f"{new_quantity:.2f}", style=new_quantity_style),
-        Text(new_concept, style=new_concept_style),
-        new_assignment,
+        new_entry_table_input["type"],
+        new_entry_table_input["date"],
+        new_entry_table_input["payer"],
+        new_entry_table_input["quantity"],
+        new_entry_table_input["concept"],
+        new_entry_table_input["assignment"],
     )
 
     console = Console()
