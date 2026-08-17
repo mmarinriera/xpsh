@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 EXAMPLE_FILE_NAME = "example.txt"
+EXAMPLE_SEARCH_FILE_NAME = "example_search.txt"
 
 
 def get_resource(file_name: str) -> Path:
@@ -15,5 +16,13 @@ def get_resource(file_name: str) -> Path:
 def example_file_path(tmp_path: Path) -> Path:
     original_path = get_resource(EXAMPLE_FILE_NAME)
     dest_path = tmp_path / EXAMPLE_FILE_NAME
+    shutil.copy(original_path, dest_path)
+    return dest_path
+
+
+@pytest.fixture
+def example_search_file_path(tmp_path: Path) -> Path:
+    original_path = get_resource(EXAMPLE_SEARCH_FILE_NAME)
+    dest_path = tmp_path / EXAMPLE_SEARCH_FILE_NAME
     shutil.copy(original_path, dest_path)
     return dest_path

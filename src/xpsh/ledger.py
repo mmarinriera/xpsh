@@ -1,5 +1,6 @@
 import datetime
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
@@ -136,6 +137,9 @@ class Transfer:
         return ",".join([self.date.strftime(DATE_OUT_FMT), self.payer, str(self.quantity), self.recipient])
 
 
+IndexedLedgerEntry = tuple[int, LedgerEntry]
+
+
 def _member_list_sanity_check(members: list[str]) -> None:
     """Ensures there's more than one member, and there's no duplicate names."""
     if len(members) <= 1:
@@ -174,6 +178,11 @@ class Ledger:
     @property
     def settle_transfers(self) -> list[Transfer]:
         return self.calculate_balance()
+
+    @property
+    def indexed_entries(self) -> list[IndexedLedgerEntry]:
+        idx = list(range(len(self.entries)))
+        return [(i, e) for i, e in zip(idx, self.entries)]
 
     def __post_init__(self) -> None:
         self._lock = FileLock(self.file_path.with_name(f".{self.file_path.name}.lock"), timeout=LOCK_TIMEOUT_SECONDS)
@@ -261,6 +270,89 @@ class Ledger:
                 identifier = "E" if isinstance(entry, Expense) else "T"
                 f.write(f"{identifier},{entry.to_output()}\n")
 
+    def _filter_by_date(
+        self, start_date: datetime.date | None, end_date: datetime.date | None
+    ) -> list[IndexedLedgerEntry]:
+        filter_date: Callable[[LedgerEntry], bool] = lambda x: True
+        if start_date is not None:
+            if end_date is not None:
+                filter_date = lambda x: x.date >= start_date and x.date <= end_date
+            else:
+                filter_date = lambda x: x.date >= start_date
+        elif end_date is not None:
+            filter_date = lambda x: x.date <= end_date
+
+        return [(i, e) for i, e in self.indexed_entries if filter_date(e)]
+
+    def _filter_by_payer(self, entries: list[IndexedLedgerEntry], payer: str) -> list[IndexedLedgerEntry]:
+        return [(i, e) for i, e in entries if e.payer == payer]
+
+    def _filter_transfers(self, entries: list[IndexedLedgerEntry], include_transfers: bool) -> list[IndexedLedgerEntry]:
+        return [(i, e) for i, e in entries if not isinstance(e, Transfer)] if not include_transfers else entries
+
+    def _filter_by_concept(self, entries: list[IndexedLedgerEntry], concept: str | None) -> list[IndexedLedgerEntry]:
+        if concept is not None:
+            return [
+                (i, e)
+                for i, e in entries
+                if isinstance(e, Transfer) or (isinstance(e, Expense) and concept in e.concept.lower())
+            ]
+        return entries
+
+    def search(
+        self,
+        payer: str,
+        concept: str | None = None,
+        start_date: datetime.date | None = None,
+        end_date: datetime.date | None = None,
+        include_transfers: bool = False,
+    ) -> list[IndexedLedgerEntry]:
+        """
+        Return a list of ledger filtered by different criteria.
+
+        Args:
+            payer: Filter by payer name.
+            concept: Filter by concept. The value can be a substring of the concept.
+            start_date: Filter entries after that date.
+            end_date: Filter entries before that date.
+            include_transfers: Include any transfers matching the filtering criteria (except concept).
+
+        Returns:
+            Filtered list of ledger entries.
+
+        Raises:
+            ValueError: If payer is not a valid member name.
+
+        """
+        if payer not in self.members:
+            raise ValueError(f"Payer {payer} doesn't exist.")
+
+        filtered_entries = self._filter_by_date(start_date, end_date)
+        filtered_entries = self._filter_by_payer(filtered_entries, payer=payer)
+        filtered_entries = self._filter_transfers(filtered_entries, include_transfers=include_transfers)
+        filtered_entries = self._filter_by_concept(filtered_entries, concept=concept)
+
+        return filtered_entries
+
+    def get_entry(self, index: int) -> LedgerEntry:
+        """
+        Return ledger entry corresponding to list index.
+
+        Args:
+            index: Entry index within list.
+
+        Returns:
+            Ledger entry.
+
+        Raises:
+            ValueError: If index is out of bounds.
+
+        """
+        if index < 0 or index > len(self.entries) - 1:
+            raise ValueError("Index out of bounds.")
+
+        return self.entries[index]
+
     def add_expense(self, expense: Expense) -> None:
         """
         Add expense to the ledger.
@@ -315,6 +407,39 @@ class Ledger:
 
         if self.track_history:
             self._update_history(transfer)
+
+    def delete_entry(self, index: int) -> None:
+        """
+        Delete ledger entry corresponding to list index.
+
+        Args:
+            index: Entry index within list.
+
+        Raises:
+            ValueError: If index is out of bounds.
+
+        """
+        if index < 0 or index > len(self.entries) - 1:
+            raise ValueError("Index out of bounds.")
+
+        self.entries.pop(index)
+
+    def replace_entry(self, index: int, entry: LedgerEntry) -> None:
+        """
+        Replace ledger entry in a specific list index.
+
+        Args:
+            index: Entry index within list.
+            entry: Entry to replace.
+
+        Raises:
+            ValueError: If index is out of bounds.
+
+        """
+        if index < 0 or index > len(self.entries) - 1:
+            raise ValueError("Index out of bounds.")
+
+        self.entries[index] = entry
 
     def calculate_balance(self) -> list[Transfer]:
         """

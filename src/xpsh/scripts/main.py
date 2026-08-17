@@ -8,6 +8,7 @@ import click
 
 from xpsh import Expense
 from xpsh import Ledger
+from xpsh import LedgerEntry
 from xpsh import Transfer
 from xpsh import console
 from xpsh import get_resource
@@ -71,6 +72,63 @@ def _add_expense(
 
     ledger.save_to_file()
     logger.info("Updated ledger saved to file.")
+
+
+def _build_updated_expense(
+    current_entry: Expense,
+    payer: str,
+    quantity: float,
+    concept: str | None,
+    assignment: list[tuple[str, float]] | None,
+    date: datetime.date,
+) -> Expense:
+    if concept is None:
+        concept = current_entry.concept
+    assignment_dict = {n: v for n, v in assignment} if assignment else current_entry.assignment
+
+    # Ensure that a reimbursment entry cannot be switched into an expense by making the quantity positive.
+    if current_entry.quantity < 0.0 and quantity > 0.0:
+        quantity = -quantity
+
+    return Expense(payer=payer, quantity=quantity, concept=concept, assignment=assignment_dict, date=date)
+
+
+def _build_updated_transfer(
+    current_entry: Transfer,
+    payer: str,
+    quantity: float,
+    recipient: str | None,
+    date: datetime.date,
+) -> Transfer:
+    if recipient is None:
+        recipient = current_entry.recipient
+    return Transfer(payer=payer, quantity=quantity, recipient=recipient, date=date)
+
+
+def _build_updated_entry(
+    current_entry: LedgerEntry,
+    payer: str | None,
+    quantity: float | None,
+    concept: str | None,
+    assignment: list[tuple[str, float]] | None,
+    recipient: str | None,
+    date_str: str | None,
+) -> LedgerEntry:
+    if payer is None:
+        payer = current_entry.payer
+
+    if quantity is None:
+        quantity = current_entry.quantity
+
+    date = datetime.datetime.strptime(date_str, DATE_OUT_FMT).date() if date_str is not None else current_entry.date
+
+    if isinstance(current_entry, Expense):
+        new_entry: LedgerEntry = _build_updated_expense(current_entry, payer, quantity, concept, assignment, date)
+
+    if isinstance(current_entry, Transfer):
+        new_entry = _build_updated_transfer(current_entry, payer, quantity, recipient, date)
+
+    return new_entry
 
 
 def print_version(ctx: click.Context, _: Any, value: Any) -> None:
@@ -185,13 +243,46 @@ def expenses(file_path: str, n_last_entries: int | None, graph: bool, grouped: s
     ledger = Ledger(file_path=resolved_path)
     logger.info("Ledger loaded from file")
 
-    console.print_entries(ledger, n_last_entries, graph, grouped)
+    console.print_expenses(ledger, n_last_entries, graph, grouped)
 
 
 @xpsh.command
 def examples() -> None:
     """Displays the keywords to load different example files using the other CLI commands."""
     console.print_examples(EXAMPLE_LEDGERS_DESCR)
+
+
+@xpsh.command
+@click.argument("file_path", type=str)
+@click.argument("payer", type=str)
+@click.option("-c", "--concept", "concept", type=str, default=None, help="Filter entries by concept.")
+@click.option(
+    "-f", "--from", "start_date", type=str, default=None, help="Filter entries later than date ('dd/mm/yyy' format)."
+)
+@click.option(
+    "-u", "--until", "end_date", type=str, default=None, help="Filter entries earlier than date ('dd/mm/yyy' format)."
+)
+@click.option("-t", "--include-transfers", "include_transfers", is_flag=True, help="Include transfers in the search.")
+def search(
+    file_path: str,
+    payer: str,
+    concept: str | None,
+    start_date: str | None,
+    end_date: str | None,
+    include_transfers: bool,
+) -> None:
+    """Search a ledger for an entry."""
+    resolved_path = _resolve_input_path(file_path)
+    ledger = Ledger(file_path=resolved_path)
+    logger.info("Ledger loaded from file")
+    entries = ledger.search(
+        payer=payer,
+        concept=concept,
+        start_date=datetime.datetime.strptime(start_date, DATE_OUT_FMT).date() if start_date is not None else None,
+        end_date=datetime.datetime.strptime(end_date, DATE_OUT_FMT).date() if end_date is not None else None,
+        include_transfers=include_transfers,
+    )
+    console.print_search_entries(ledger, entries)
 
 
 @xpsh.command
@@ -404,3 +495,114 @@ def add_transfer(
 
     ledger.save_to_file()
     logger.info("Updated ledger saved to file.")
+
+
+@xpsh.command
+@click.argument("file_path", type=str)
+@click.argument("index", type=int)
+@click.option("-y", "--yes", "yes", is_flag=True, help="Confirm deletion of entry without input prompt.")
+def delete_entry(file_path: str, index: int, yes: bool) -> None:
+    """
+    Delete an entry from the ledger.
+
+    FILE_PATH is the path to the ledger file to be loaded.
+
+    INDEX is the number used to identify the entry.
+
+    TIP! Use "xpsh expenses" or "xpsh search" to find which index corresponds to the entry you are looking for.
+
+    """
+    resolved_path = _resolve_input_path(file_path)
+    ledger = Ledger(file_path=resolved_path)
+    logger.info("Ledger loaded from file")
+
+    try:
+        entry = ledger.get_entry(index)
+    except ValueError:
+        logger.critical(f"Index {index} does not correspond to a valid entry.")
+        sys.exit(1)
+
+    console.print_single_entry(ledger, index, entry)
+    confirm: str = click.prompt("Are you sure you want to delete this entry?[y|n]", default="n") if not yes else "y"
+
+    if confirm.lower() != "y":
+        logger.info("Action cancelled.")
+        sys.exit(0)
+
+    ledger.delete_entry(index)
+    ledger.save_to_file()
+    logger.info("Entry deleted from ledger.")
+    logger.warning("Entries indexing has changed after changed. Check indexes before deleting the next entry!")
+
+
+@xpsh.command
+@click.argument("file_path", type=str)
+@click.argument("index", type=int)
+@click.option("-p", "--payer", "payer", type=str, default=None, help="Edit the payer.")
+@click.option("-q", "--quantity", "quantity", type=float, default=None, help="Edit the quantity.")
+@click.option(
+    "-c", "--concept", "concept", type=str, default=None, help="Edit the concept (expense and reimbursement only)."
+)
+@click.option(
+    "-a",
+    "--assignment",
+    "assignment",
+    type=(str, float),
+    default=[],
+    multiple=True,
+    help="Edit the assignment.",
+)
+@click.option("-r", "--recipient", "recipient", type=str, default=None, help="Edit the recipient (transfers only).")
+@click.option("-d", "--date", "date_str", type=str, default=None, help="Edit the date ('dd/mm/yyy' format).")
+@click.option("-y", "--yes", "yes", is_flag=True, help="Confirm deletion of entry without input prompt.")
+def edit_entry(
+    file_path: str,
+    index: int,
+    payer: str | None,
+    quantity: float | None,
+    concept: str | None,
+    recipient: str | None,
+    assignment: list[tuple[str, float]] | None,
+    date_str: str | None,
+    yes: bool,
+) -> None:
+    """
+    Edit an entry from the ledger.
+
+    FILE_PATH is the path to the ledger file to be loaded.
+
+    INDEX is the number used to identify the entry.
+
+    TIP! Use "xpsh expenses" or "xpsh search" to find which index corresponds to the entry you are looking for.
+
+    """
+    resolved_path = _resolve_input_path(file_path)
+    ledger = Ledger(file_path=resolved_path)
+    logger.info("Ledger loaded from file")
+
+    try:
+        entry = ledger.get_entry(index)
+    except ValueError:
+        logger.critical(f"Index {index} does not correspond to a valid entry.")
+        sys.exit(1)
+
+    new_entry = _build_updated_entry(
+        entry,
+        payer=payer,
+        quantity=quantity,
+        concept=concept,
+        assignment=assignment,
+        recipient=recipient,
+        date_str=date_str,
+    )
+
+    console.print_entry_diff(entry, new_entry)
+
+    confirm: str = click.prompt("Are you sure you want to edit this entry?[y|n]", default="n") if not yes else "y"
+    if confirm.lower() != "y":
+        logger.info("Action cancelled.")
+        sys.exit(0)
+
+    ledger.replace_entry(index, new_entry)
+    ledger.save_to_file()
+    logger.info("Entry modified.")

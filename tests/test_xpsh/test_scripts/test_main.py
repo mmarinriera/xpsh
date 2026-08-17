@@ -107,13 +107,13 @@ Transfers to settle
 
 
 def test_expenses(example_file_path: Path, subtests: pytest.Subtests) -> None:
-    TARGET_OUTPUT = """Entries                                                                            
-┏━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃    Type ┃       Date ┃ Paid by ┃ Quantity ┃    Concept ┃ Assignment / Recipient ┃
-┡━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
-│ Expense │ 01/01/2000 │       A │    10.00 │      Stuff │ A=50.00%, B=50.00%     │
-│ Expense │ 01/01/2000 │       B │    20.00 │ More stuff │ A=50.00%, B=50.00%     │
-└─────────┴────────────┴─────────┴──────────┴────────────┴────────────────────────┘
+    TARGET_OUTPUT = """Entries                                                                                    
+┏━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Index ┃    Type ┃       Date ┃ Paid by ┃ Quantity ┃    Concept ┃ Assignment / Recipient ┃
+┡━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
+│     0 │ Expense │ 01/01/2000 │       A │    10.00 │      Stuff │ A=50.00%, B=50.00%     │
+│     1 │ Expense │ 01/01/2000 │       B │    20.00 │ More stuff │ A=50.00%, B=50.00%     │
+└───────┴─────────┴────────────┴─────────┴──────────┴────────────┴────────────────────────┘
 """
 
     runner = CliRunner()
@@ -131,6 +131,53 @@ def test_examples(subtests: pytest.Subtests) -> None:
     result = runner.invoke(xpsh, ["examples"])
     with subtests.test("Test cli examples exitcode."):
         assert result.exit_code == 0
+
+
+def test_search(example_search_file_path: Path, subtests: pytest.Subtests) -> None:
+    TARGET_OUTPUT = """Entries                                                                                          
+┏━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Index ┃     Type ┃       Date ┃ Paid by ┃ Quantity ┃         Concept ┃ Assignment / Recipient ┃
+┡━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
+│     3 │  Expense │ 03/01/2000 │       A │    20.00 │ Even more stuff │ A=50.00%, B=50.00%     │
+│     4 │ Transfer │ 03/01/2000 │       A │    10.00 │               - │ B                      │
+│     6 │  Expense │ 05/01/2000 │       A │    20.00 │  And more stuff │ A=50.00%, B=50.00%     │
+└───────┴──────────┴────────────┴─────────┴──────────┴─────────────────┴────────────────────────┘
+"""
+
+    runner = CliRunner()
+    result = runner.invoke(
+        xpsh,
+        [
+            "search",
+            str(example_search_file_path),
+            "A",
+            "-c",
+            "stuff",
+            "--from",
+            "02/01/2000",
+            "--until",
+            "05/01/2000",
+            "--include-transfers",
+        ],
+    )
+
+    with subtests.test("Test cli search exitcode."):
+        assert result.exit_code == 0
+    with subtests.test("Test cli search console output"):
+        assert result.output == TARGET_OUTPUT
+
+
+def test_search_no_hits(example_search_file_path: Path, subtests: pytest.Subtests) -> None:
+    TARGET_OUTPUT = """No entries found matching the criteria.
+"""
+
+    runner = CliRunner()
+    result = runner.invoke(xpsh, ["search", str(example_search_file_path), "A", "-c", "something"])
+    print(result.output)
+    with subtests.test("Test cli search exitcode."):
+        assert result.exit_code == 0
+    with subtests.test("Test cli search console output"):
+        assert result.output == TARGET_OUTPUT
 
 
 def test_add_expense(example_file_path: Path, subtests: pytest.Subtests) -> None:
@@ -314,3 +361,187 @@ The balance is settled!
 
     with subtests.test("Test cli add-transfer console output"):
         assert result.output == TARGET_OUTPUT
+
+
+def test_delete_entry(example_file_path: Path, subtests: pytest.Subtests) -> None:
+    TARGET_FILE_CONTENT = """A,B
+E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
+"""
+
+    runner = CliRunner()
+    result = runner.invoke(
+        xpsh,
+        [
+            "delete-entry",
+            str(example_file_path),
+            "0",
+            "-y",
+        ],
+    )
+    with subtests.test("Test cli delete exitcode."):
+        assert result.exit_code == 0
+    with subtests.test("Test cli delete file output"):
+        with open(example_file_path) as f:
+            file_content = f.read()
+        assert file_content == TARGET_FILE_CONTENT
+
+
+def test_delete_entry_w_prompt(example_file_path: Path, subtests: pytest.Subtests) -> None:
+    TARGET_FILE_CONTENT_UNMODIFIED = """A,B
+E,01/01/2000,A,10.0,Stuff,A:0.5,B:0.5
+E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
+"""
+
+    TARGET_FILE_CONTENT = """A,B
+E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
+"""
+
+    runner = CliRunner()
+    result = runner.invoke(
+        xpsh,
+        [
+            "delete-entry",
+            str(example_file_path),
+            "0",
+        ],
+        input="\n",
+    )
+    with subtests.test("Test cli delete prompt aborted exitcode."):
+        assert result.exit_code == 0
+    with subtests.test("Test cli delete prompt aborted file output"):
+        with open(example_file_path) as f:
+            file_content = f.read()
+        assert file_content == TARGET_FILE_CONTENT_UNMODIFIED
+
+    runner = CliRunner()
+    result = runner.invoke(
+        xpsh,
+        [
+            "delete-entry",
+            str(example_file_path),
+            "0",
+        ],
+        input="y\n",
+    )
+    with subtests.test("Test cli delete prompt exitcode."):
+        assert result.exit_code == 0
+    with subtests.test("Test cli delete prompt file output"):
+        with open(example_file_path) as f:
+            file_content = f.read()
+        assert file_content == TARGET_FILE_CONTENT
+
+
+def test_delete_entry_out_of_bounds(
+    example_file_path: Path, subtests: pytest.Subtests, caplog: pytest.LogCaptureFixture
+) -> None:
+    TARGET_OUTPUT = "Index 3 does not correspond to a valid entry."
+    runner = CliRunner()
+    result = runner.invoke(
+        xpsh,
+        [
+            "delete-entry",
+            str(example_file_path),
+            "3",
+        ],
+    )
+    with subtests.test("Test cli delete out of bounds exitcode."):
+        assert result.exit_code == 1
+    with subtests.test("Test cli delete out of bounds console output"):
+        assert TARGET_OUTPUT in caplog.text
+
+
+def test_edit_entry_prompt(example_file_path: Path, subtests: pytest.Subtests) -> None:
+    TARGET_FILE_CONTENT_UNMODIFIED = """A,B
+E,01/01/2000,A,10.0,Stuff,A:0.5,B:0.5
+E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
+"""
+    TARGET_FILE_CONTENT = """A,B
+E,01/01/2000,A,15.0,Stuff,A:0.5,B:0.5
+E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
+"""
+
+    runner = CliRunner()
+    result = runner.invoke(
+        xpsh,
+        ["edit-entry", str(example_file_path), "0", "-q", "15"],
+        input="\n",
+    )
+    with subtests.test("Test cli edit entry cancelled exitcode."):
+        assert result.exit_code == 0
+    with subtests.test("Test cli edit entry cancelled file output"):
+        with open(example_file_path) as f:
+            file_content = f.read()
+        assert file_content == TARGET_FILE_CONTENT_UNMODIFIED
+
+    runner = CliRunner()
+    result = runner.invoke(
+        xpsh,
+        ["edit-entry", str(example_file_path), "0", "-q", "15"],
+        input="y\n",
+    )
+    with subtests.test("Test cli edit entry prompt exitcode."):
+        assert result.exit_code == 0
+    with subtests.test("Test cli edit entry prompt file output"):
+        with open(example_file_path) as f:
+            file_content = f.read()
+        assert file_content == TARGET_FILE_CONTENT
+
+
+def test_edit_entry(example_file_path: Path, subtests: pytest.Subtests) -> None:
+    TARGET_FILE_CONTENT = """A,B
+E,01/01/2000,A,10.0,Stuff,A:0.5,B:0.5
+E,02/01/2000,A,15.0,Other,A:0.75,B:0.25
+"""
+
+    runner = CliRunner()
+    result = runner.invoke(
+        xpsh,
+        [
+            "edit-entry",
+            str(example_file_path),
+            "1",
+            "-p",
+            "A",
+            "-q",
+            "15",
+            "-c",
+            "Other",
+            "-a",
+            "A",
+            "3",
+            "-a",
+            "B",
+            "1",
+            "-d",
+            "02/01/2000",
+            "-y",
+        ],
+        input="\n",
+    )
+    with subtests.test("Test cli edit entry exitcode."):
+        assert result.exit_code == 0
+    with subtests.test("Test cli edit entry file output"):
+        with open(example_file_path) as f:
+            file_content = f.read()
+        assert file_content == TARGET_FILE_CONTENT
+
+
+def test_edit_entry_out_of_bounds(
+    example_file_path: Path, subtests: pytest.Subtests, caplog: pytest.LogCaptureFixture
+) -> None:
+    TARGET_OUTPUT = "Index 3 does not correspond to a valid entry."
+    runner = CliRunner()
+    result = runner.invoke(
+        xpsh,
+        [
+            "edit-entry",
+            str(example_file_path),
+            "3",
+            "-q",
+            "15",
+        ],
+    )
+    with subtests.test("Test cli edit entry out of bounds exitcode."):
+        assert result.exit_code == 1
+    with subtests.test("Test cli edit entry out of bounds console output"):
+        assert TARGET_OUTPUT in caplog.text

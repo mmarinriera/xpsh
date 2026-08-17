@@ -1,5 +1,6 @@
 import itertools
 import logging
+from typing import Any
 
 import plotext as plt
 from rich.ansi import AnsiDecoder
@@ -18,6 +19,7 @@ from xpsh import LedgerEntry
 from xpsh import Transfer
 from xpsh import utils
 from xpsh.ledger import DATE_OUT_FMT
+from xpsh.ledger import IndexedLedgerEntry
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,10 @@ COLOR_PALETTE = [
 ]
 
 PLOT_PAD = (1, 2)
+
+STYLE_DIFF_OLD = "bold red"
+STYLE_DIFF_NEW = "bold green"
+STYLE_NO_DIFF = ""
 
 
 def _build_member_color_map(members: list[str], color_palette: list[int]) -> dict[str, str]:
@@ -68,6 +74,46 @@ class plotextMixin(JupyterMixin):
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         self.rich_canvas = Group(*self.decoder.decode(self.canvas))
         yield self.rich_canvas
+
+
+def _print_entries_table(entries: list[IndexedLedgerEntry], color_map: dict[str, str], title: str = "Entries") -> Table:
+    entry_table = Table(title=title, title_justify="left", title_style="bold")
+    entry_table.add_column("Index", justify="right")
+    entry_table.add_column("Type", justify="right")
+    entry_table.add_column("Date", justify="right")
+    entry_table.add_column("Paid by", justify="right")
+    entry_table.add_column("Quantity", justify="right")
+    entry_table.add_column("Concept", justify="right")
+    entry_table.add_column("Assignment / Recipient", justify="left")
+
+    for idx, entry in entries:
+        if isinstance(entry, Expense):
+            entry_type = Text("Expense") if entry.quantity >= 0.0 else Text("Reimbursement")
+            quantity = (
+                Text(f"{entry.quantity:.2f}")
+                if entry.quantity >= 0.0
+                else Text(f"{-entry.quantity:.2f}", style=utils.COLOR_IS_OWED)
+            )
+            assignment = AssignmentDictRenderer(entry.assignment, color_map)
+            concept = Text(entry.concept)
+        elif isinstance(entry, Transfer):
+            entry_type = Text("Transfer", style=utils.COLOR_TRANSFER_TYPE)
+            quantity = Text(f"{entry.quantity:.2f}", style=utils.COLOR_TRANSFER_TYPE)
+            assignment = Text(entry.recipient, style=color_map[entry.recipient])
+            concept = Text("-")
+        else:
+            raise ValueError(f"Unknown entry type (should never happen). {entry}.")
+
+        entry_table.add_row(
+            str(idx),
+            entry_type,
+            entry.date.strftime(DATE_OUT_FMT),
+            Text(entry.payer, style=color_map[entry.payer]),
+            quantity,
+            concept,
+            assignment,
+        )
+    return entry_table
 
 
 def _balance_history_plot(width: int, height: int, ledger: Ledger, title: str) -> str:
@@ -183,16 +229,146 @@ def _build_expense_plot(width: int, entries: list[LedgerEntry], members: list[st
     return plotextMixin(plot_canvas=canvas)
 
 
-def print_entries(ledger: Ledger, n_last_entries: int | None, plot: bool, grouped: str) -> None:
+def print_expenses(ledger: Ledger, n_last_entries: int | None, plot: bool, grouped: str) -> None:
     """Pretty print ledger entries in terminal using rich text."""
     if n_last_entries is not None and n_last_entries < len(ledger.entries):
-        entries = ledger.entries[-n_last_entries:]
+        idx_entries = ledger.indexed_entries[-n_last_entries:]
     else:
-        entries = ledger.entries
+        idx_entries = ledger.indexed_entries
 
     name_color_map = _build_member_color_map(ledger.members, COLOR_PALETTE)
 
-    entry_table = Table(title="Entries", title_justify="left")
+    console = Console()
+    console.print(_print_entries_table(idx_entries, name_color_map))
+    if plot:
+        console.print(
+            Padding(
+                _build_expense_plot(console.width, [e for _, e in idx_entries], ledger.members, grouped=grouped),
+                pad=PLOT_PAD,
+            )
+        )
+
+
+def print_search_entries(ledger: Ledger, entries: list[IndexedLedgerEntry]) -> None:
+    name_color_map = _build_member_color_map(ledger.members, COLOR_PALETTE)
+    console = Console()
+    if not entries:
+        console.print("No entries found matching the criteria.")
+        return
+
+    console.print(_print_entries_table(entries, name_color_map))
+
+
+def print_single_entry(ledger: Ledger, index: int, entry: LedgerEntry) -> None:
+    name_color_map = _build_member_color_map(ledger.members, COLOR_PALETTE)
+    console = Console()
+    console.print(_print_entries_table([(index, entry)], name_color_map, title="Selected entry"))
+
+
+def _diff_table_resolve_common_fields(
+    entry: LedgerEntry,
+    new_entry: LedgerEntry,
+    current_entry_table_input: dict[str, Any],
+    new_entry_table_input: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    if entry.date != new_entry.date:
+        current_date_style = STYLE_DIFF_OLD
+        new_date_style = STYLE_DIFF_NEW
+    else:
+        current_date_style = STYLE_NO_DIFF
+        new_date_style = STYLE_NO_DIFF
+
+    if entry.payer != new_entry.payer:
+        current_payer_style = STYLE_DIFF_OLD
+        new_payer_style = STYLE_DIFF_NEW
+    else:
+        current_payer_style = STYLE_NO_DIFF
+        new_payer_style = STYLE_NO_DIFF
+
+    if entry.quantity != new_entry.quantity:
+        current_quantity_style = STYLE_DIFF_OLD
+        new_quantity_style = STYLE_DIFF_NEW
+    else:
+        current_quantity_style = STYLE_NO_DIFF
+        new_quantity_style = STYLE_NO_DIFF
+
+    current_entry_table_input["date"] = Text(entry.date.strftime(DATE_OUT_FMT), style=current_date_style)
+    new_entry_table_input["date"] = Text(new_entry.date.strftime(DATE_OUT_FMT), style=new_date_style)
+
+    current_entry_table_input["payer"] = Text(entry.payer, style=current_payer_style)
+    new_entry_table_input["payer"] = Text(new_entry.payer, style=new_payer_style)
+
+    current_entry_table_input["quantity"] = Text(f"{abs(entry.quantity):.2f}", style=current_quantity_style)
+    new_entry_table_input["quantity"] = Text(f"{abs(new_entry.quantity):.2f}", style=new_quantity_style)
+
+    return current_entry_table_input, new_entry_table_input
+
+
+def _diff_table_resolve_expense_fields(
+    entry: Expense,
+    new_entry: Expense,
+    current_entry_table_input: dict[str, Any],
+    new_entry_table_input: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    entry_type = "Expense" if entry.quantity >= 0.0 else "Reimbursement"
+    current_entry_table_input["type"] = Text(entry_type)
+    new_entry_table_input["type"] = Text(entry_type)
+
+    if entry.assignment != new_entry.assignment:
+        current_entry_table_input["assignment"] = AssignmentDictRenderer(
+            entry.assignment, dict.fromkeys(entry.assignment.keys(), "red")
+        )
+        new_entry_table_input["assignment"] = AssignmentDictRenderer(
+            new_entry.assignment, dict.fromkeys(entry.assignment.keys(), "green")
+        )
+    else:
+        current_entry_table_input["assignment"] = AssignmentDictRenderer(
+            entry.assignment, dict.fromkeys(entry.assignment.keys(), "")
+        )
+        new_entry_table_input["assignment"] = AssignmentDictRenderer(
+            new_entry.assignment, dict.fromkeys(entry.assignment.keys(), "")
+        )
+
+    current_concept = entry.concept
+    new_concept = new_entry.concept
+    if current_concept != new_concept:
+        current_concept_style = STYLE_DIFF_OLD
+        new_concept_style = STYLE_DIFF_NEW
+    else:
+        current_concept_style = STYLE_NO_DIFF
+        new_concept_style = STYLE_NO_DIFF
+
+    current_entry_table_input["concept"] = Text(entry.concept, style=current_concept_style)
+    new_entry_table_input["concept"] = Text(new_entry.concept, style=new_concept_style)
+
+    return current_entry_table_input, new_entry_table_input
+
+
+def _diff_table_resolve_transfer_fields(
+    entry: Transfer,
+    new_entry: Transfer,
+    current_entry_table_input: dict[str, Any],
+    new_entry_table_input: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    current_entry_table_input["type"] = Text("Transfer")
+    new_entry_table_input["type"] = Text("Transfer")
+
+    if entry.recipient != new_entry.recipient:
+        current_entry_table_input["assignment"] = Text(entry.recipient, style=STYLE_DIFF_OLD)
+        new_entry_table_input["assignment"] = Text(new_entry.recipient, style=STYLE_DIFF_NEW)
+    else:
+        current_entry_table_input["assignment"] = Text(entry.recipient, style=STYLE_NO_DIFF)
+        new_entry_table_input["assignment"] = Text(new_entry.recipient, style=STYLE_NO_DIFF)
+
+    current_entry_table_input["concept"] = Text("-", style=STYLE_NO_DIFF)
+    new_entry_table_input["concept"] = Text("-", style=STYLE_NO_DIFF)
+
+    return current_entry_table_input, new_entry_table_input
+
+
+def print_entry_diff(entry: LedgerEntry, new_entry: LedgerEntry) -> None:
+    entry_table = Table(title="Entry Update", title_justify="left", title_style="bold")
+    entry_table.add_column("", justify="right")
     entry_table.add_column("Type", justify="right")
     entry_table.add_column("Date", justify="right")
     entry_table.add_column("Paid by", justify="right")
@@ -200,39 +376,46 @@ def print_entries(ledger: Ledger, n_last_entries: int | None, plot: bool, groupe
     entry_table.add_column("Concept", justify="right")
     entry_table.add_column("Assignment / Recipient", justify="left")
 
-    for entry in entries:
-        if isinstance(entry, Expense):
-            entry_type = Text("Expense") if entry.quantity >= 0.0 else Text("Reimbursement")
-            quantity = (
-                Text(f"{entry.quantity:.2f}")
-                if entry.quantity >= 0.0
-                else Text(f"{-entry.quantity:.2f}", style=utils.COLOR_IS_OWED)
-            )
-            assignment = AssignmentDictRenderer(entry.assignment, name_color_map)
-            concept = Text(entry.concept)
-        elif isinstance(entry, Transfer):
-            entry_type = Text("Transfer", style=utils.COLOR_TRANSFER_TYPE)
-            quantity = Text(f"{entry.quantity:.2f}", style=utils.COLOR_TRANSFER_TYPE)
-            assignment = Text(entry.recipient, style=name_color_map[entry.recipient])
-            concept = Text("-")
-        else:
-            raise ValueError(f"Unknown entry type (should never happen). {entry}.")
+    current_entry_table_input: dict[str, Text] = {}
+    new_entry_table_input: dict[str, Text] = {}
 
-        entry_table.add_row(
-            entry_type,
-            entry.date.strftime(DATE_OUT_FMT),
-            Text(entry.payer, style=name_color_map[entry.payer]),
-            quantity,
-            concept,
-            assignment,
+    current_entry_table_input, new_entry_table_input = _diff_table_resolve_common_fields(
+        entry, new_entry, current_entry_table_input, new_entry_table_input
+    )
+
+    if isinstance(entry, Expense) and isinstance(new_entry, Expense):
+        current_entry_table_input, new_entry_table_input = _diff_table_resolve_expense_fields(
+            entry, new_entry, current_entry_table_input, new_entry_table_input
         )
+
+    elif isinstance(entry, Transfer) and isinstance(new_entry, Transfer):
+        current_entry_table_input, new_entry_table_input = _diff_table_resolve_transfer_fields(
+            entry, new_entry, current_entry_table_input, new_entry_table_input
+        )
+    else:
+        raise ValueError("Current and updated entries should be of same type (this should not happen).")
+
+    entry_table.add_row(
+        Text("Current", style=STYLE_DIFF_OLD),
+        current_entry_table_input["type"],
+        current_entry_table_input["date"],
+        current_entry_table_input["payer"],
+        current_entry_table_input["quantity"],
+        current_entry_table_input["concept"],
+        current_entry_table_input["assignment"],
+    )
+    entry_table.add_row(
+        Text("Updated", style=STYLE_DIFF_NEW),
+        new_entry_table_input["type"],
+        new_entry_table_input["date"],
+        new_entry_table_input["payer"],
+        new_entry_table_input["quantity"],
+        new_entry_table_input["concept"],
+        new_entry_table_input["assignment"],
+    )
 
     console = Console()
     console.print(entry_table)
-    if plot:
-        console.print(
-            Padding(_build_expense_plot(console.width, entries, ledger.members, grouped=grouped), pad=PLOT_PAD)
-        )
 
 
 def print_examples(examples_dict: dict[str, str]) -> None:
