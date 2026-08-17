@@ -4,10 +4,10 @@ repos:
 -   repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.0
     hooks:
-      - id: ruff
+    -   id: ruff
         name: Run ruff to auto-fix lint errors
         types_or: [ python, pyi ]
-      - id: ruff-format
+    -   id: ruff-format
         name: Run ruff to format code
         types_or: [ python, pyi ]
 
@@ -26,10 +26,17 @@ repos:
     -   id: mypy
         files: ^src/xpsh/|^tests
 
+
+-   repo: https://github.com/rohaquinlop/complexipy-pre-commit
+    rev: v7.0.1
+    hooks:
+      - id: complexipy
+        name: Check code cognitive complexity
+
 -   repo: https://github.com/commitizen-tools/commitizen
     rev: v4.16.5
     hooks:
-      - id: commitizen
+    -   id: commitizen
         stages: [commit-msg]
 
 -   repo: https://github.com/astral-sh/uv-pre-commit
@@ -38,25 +45,25 @@ repos:
     -   id: uv-lock
         name: Update uv lock file
 
-- repo: https://github.com/jsh9/pydoclint
-  rev: 0.9.1
-  hooks:
-    - id: pydoclint
-      files: ^src/xpsh/
+-   repo: https://github.com/jsh9/pydoclint
+    rev: 0.9.1
+    hooks:
+    -   id: pydoclint
+        files: ^src/xpsh/
 
-- repo: https://github.com/tox-dev/pyproject-fmt
-  rev: v2.25.3
-  hooks:
-    - id: pyproject-fmt
+-   repo: https://github.com/tox-dev/pyproject-fmt
+    rev: v2.25.3
+    hooks:
+    -   id: pyproject-fmt
 
-- repo: https://github.com/tox-dev/tox-toml-fmt
-  rev: v1.9.3
-  hooks:
-    - id: tox-toml-fmt
-      files: tox.toml
+-   repo: https://github.com/tox-dev/tox-toml-fmt
+    rev: v1.9.3
+    hooks:
+    -   id: tox-toml-fmt
+        files: tox.toml
 
-- repo: https://github.com/python-jsonschema/check-jsonschema
-  rev: 0.37.4
-  hooks:
-    - id: check-github-workflows
-      args: ["--verbose"]
+-   repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.37.4
+    hooks:
+    -   id: check-github-workflows
+        args: ["--verbose"]
