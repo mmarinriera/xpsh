@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v0.9.0 (2026-08-17)
+
+### Features
+
+- Support for edit and delete ledger entries ([#13](https://github.com/mmarinriera/xpsh/pull/13),
+  [`eb33a71`](https://github.com/mmarinriera/xpsh/commit/eb33a71852e4fc1acfbc590748121f9ac9a78df5))
+
+- **cli**: Search command. ([#13](https://github.com/mmarinriera/xpsh/pull/13),
+  [`eb33a71`](https://github.com/mmarinriera/xpsh/commit/eb33a71852e4fc1acfbc590748121f9ac9a78df5))
+
+
 ## v0.8.0 (2026-08-13)
 
 ### Chores
