@@ -6,6 +6,7 @@ import streamlit as st
 from xpsh import Ledger
 from xpsh import get_version
 from xpsh.app.add_entry import add_entry
+from xpsh.app.edit_entry import edit_entry
 
 
 def main() -> None:
@@ -43,7 +44,7 @@ def main() -> None:
     if active_tab == tabs[0]:
         add_entry(ledger)
     else:
-        return
+        edit_entry(ledger)
 
 
 if __name__ == "__main__":

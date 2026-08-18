@@ -1,5 +1,9 @@
 import itertools
 
+from xpsh import Expense
+from xpsh import LedgerEntry
+from xpsh import Transfer
+
 DATE_FMT = "%d/%m/%Y"
 DATE_INPUT_FMT = "DD/MM/YYYY"
 COLOR_PALETTE = [
@@ -23,3 +27,20 @@ COLOR_TRANSFER_TYPE = "cyan"
 
 def build_member_color_map(members: list[str], color_palette: list[str]) -> dict[str, str]:
     return dict(zip(members, itertools.cycle(color_palette)))
+
+
+def format_member_name(name: str, color_map: dict[str, str]) -> str:
+    color = color_map[name]
+    return f":color[**{name}**]{{foreground='{color}'}}"
+
+
+def format_assignment(entry: LedgerEntry, member_color_map: dict[str, str]) -> str:
+    if isinstance(entry, Transfer):
+        return format_member_name(entry.recipient, member_color_map)
+    if isinstance(entry, Expense):
+        assignments_str = []
+        for name, fraction in entry.assignment.items():
+            color = member_color_map[name]
+            assignments_str.append(f":color[**{name}**={100 * fraction:.2f}%]{{foreground='{color}'}}")
+        return ", ".join(assignments_str)
+    raise ValueError(f"Unknown entry type: {entry}")

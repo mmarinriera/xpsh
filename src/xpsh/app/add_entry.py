@@ -2,7 +2,6 @@ import streamlit as st
 
 from xpsh import Ledger
 from xpsh.ledger import Expense
-from xpsh.ledger import LedgerEntry
 from xpsh.ledger import Transfer
 
 from . import utils
@@ -97,23 +96,6 @@ def _submit_transfer(ledger: Ledger) -> None:
         st.success("Transfer added!")
 
 
-def _format_member_name(name: str, color_map: dict[str, str]) -> str:
-    color = color_map[name]
-    return f":color[**{name}**]{{foreground='{color}'}}"
-
-
-def _format_assignment(entry: LedgerEntry, member_color_map: dict[str, str]) -> str:
-    if isinstance(entry, Transfer):
-        return _format_member_name(entry.recipient, member_color_map)
-    if isinstance(entry, Expense):
-        assignments_str = []
-        for name, fraction in entry.assignment.items():
-            color = member_color_map[name]
-            assignments_str.append(f":color[**{name}**={100 * fraction:.2f}%]{{foreground='{color}'}}")
-        return ", ".join(assignments_str)
-    raise ValueError(f"Unknown entry type: {entry}")
-
-
 def _show_last_entries(ledger: Ledger, n_last_entries: int = 10) -> None:
     entries = ledger.entries[-n_last_entries:] if len(ledger.entries) > n_last_entries else ledger.entries
     member_color_map = utils.build_member_color_map(ledger.members, utils.COLOR_PALETTE)
@@ -124,7 +106,7 @@ def _show_last_entries(ledger: Ledger, n_last_entries: int = 10) -> None:
     assignment = []
     for entry in entries[::-1]:
         date.append(entry.date.strftime(utils.DATE_FMT))
-        payer.append(_format_member_name(entry.payer, member_color_map))
+        payer.append(utils.format_member_name(entry.payer, member_color_map))
         if isinstance(entry, Expense):
             quantity.append(
                 f"{entry.quantity}"
@@ -140,7 +122,7 @@ def _show_last_entries(ledger: Ledger, n_last_entries: int = 10) -> None:
             quantity.append(f":color[{entry.quantity}]{{foreground='{utils.COLOR_TRANSFER_TYPE}'}}")
             concept.append(f":color[Transfer]{{foreground='{utils.COLOR_TRANSFER_TYPE}'}}")
 
-        assignment.append(_format_assignment(entry, member_color_map))
+        assignment.append(utils.format_assignment(entry, member_color_map))
     st.table(
         {"Date": date, "Payer": payer, "Quantity": quantity, "Concept": concept, "Assignment/Recipient": assignment}
     )
@@ -153,7 +135,7 @@ def _show_balance(ledger: Ledger) -> None:
     paid = []
     owed = []
     for name, account in ledger.accounts.items():
-        member.append(_format_member_name(name, member_color_map))
+        member.append(utils.format_member_name(name, member_color_map))
         spent.append(f"{account.spent:.2f}")
         paid.append(f"{account.paid:.2f}")
         color_owed = utils.COLOR_OWES if account.owed > 0 else utils.COLOR_IS_OWED
@@ -170,8 +152,8 @@ def _show_balance(ledger: Ledger) -> None:
     quantity = []
     recipient = []
     for transfer in settle_transfers:
-        payer.append(_format_member_name(transfer.payer, member_color_map))
-        recipient.append(_format_member_name(transfer.recipient, member_color_map))
+        payer.append(utils.format_member_name(transfer.payer, member_color_map))
+        recipient.append(utils.format_member_name(transfer.recipient, member_color_map))
         quantity.append(f"{transfer.quantity:.2f}")
     st.subheader("Transfers to settle")
     st.table({"From": payer, "To": recipient, "Quantity": quantity})
