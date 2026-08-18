@@ -97,35 +97,10 @@ def _submit_transfer(ledger: Ledger) -> None:
 
 
 def _show_last_entries(ledger: Ledger, n_last_entries: int = 10) -> None:
-    entries = ledger.entries[-n_last_entries:] if len(ledger.entries) > n_last_entries else ledger.entries
-    member_color_map = utils.build_member_color_map(ledger.members, utils.COLOR_PALETTE)
-    date = []
-    payer = []
-    quantity = []
-    concept = []
-    assignment = []
-    for entry in entries[::-1]:
-        date.append(entry.date.strftime(utils.DATE_FMT))
-        payer.append(utils.format_member_name(entry.payer, member_color_map))
-        if isinstance(entry, Expense):
-            quantity.append(
-                f"{entry.quantity}"
-                if entry.quantity >= 0.0
-                else f":color[{-entry.quantity}]{{foreground='{utils.COLOR_REIMBURSEMENT_TYPE}'}}"
-            )
-            concept.append(
-                entry.concept
-                if entry.quantity >= 0.0
-                else f":color[{entry.concept}]{{foreground='{utils.COLOR_REIMBURSEMENT_TYPE}'}}"
-            )
-        else:
-            quantity.append(f":color[{entry.quantity}]{{foreground='{utils.COLOR_TRANSFER_TYPE}'}}")
-            concept.append(f":color[Transfer]{{foreground='{utils.COLOR_TRANSFER_TYPE}'}}")
-
-        assignment.append(utils.format_assignment(entry, member_color_map))
-    st.table(
-        {"Date": date, "Payer": payer, "Quantity": quantity, "Concept": concept, "Assignment/Recipient": assignment}
+    entries = (
+        ledger.indexed_entries[-n_last_entries:] if len(ledger.entries) > n_last_entries else ledger.indexed_entries
     )
+    st.table(utils.build_entry_table_data(entries, members=ledger.members))
 
 
 def _show_balance(ledger: Ledger) -> None:

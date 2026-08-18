@@ -1,6 +1,5 @@
 import streamlit as st
 
-from xpsh import Expense
 from xpsh import Ledger
 
 from . import utils
@@ -8,7 +7,6 @@ from . import utils
 
 def _entry_table_with_filters(ledger: Ledger) -> None:
     st.header("Search entries")
-    member_color_map = utils.build_member_color_map(ledger.members, utils.COLOR_PALETTE)
 
     col0, col1 = st.columns(2)
 
@@ -28,33 +26,7 @@ def _entry_table_with_filters(ledger: Ledger) -> None:
         include_transfers=include_transfers,
     )
 
-    date = []
-    payer = []
-    quantity = []
-    concept = []
-    assignment = []
-    for _, entry in entries[::-1]:
-        date.append(entry.date.strftime(utils.DATE_FMT))
-        payer.append(utils.format_member_name(entry.payer, member_color_map))
-        if isinstance(entry, Expense):
-            quantity.append(
-                f"{entry.quantity}"
-                if entry.quantity >= 0.0
-                else f":color[{-entry.quantity}]{{foreground='{utils.COLOR_REIMBURSEMENT_TYPE}'}}"
-            )
-            concept.append(
-                entry.concept
-                if entry.quantity >= 0.0
-                else f":color[{entry.concept}]{{foreground='{utils.COLOR_REIMBURSEMENT_TYPE}'}}"
-            )
-        else:
-            quantity.append(f":color[{entry.quantity}]{{foreground='{utils.COLOR_TRANSFER_TYPE}'}}")
-            concept.append(f":color[Transfer]{{foreground='{utils.COLOR_TRANSFER_TYPE}'}}")
-
-        assignment.append(utils.format_assignment(entry, member_color_map))
-    st.table(
-        {"Date": date, "Payer": payer, "Quantity": quantity, "Concept": concept, "Assignment/Recipient": assignment}
-    )
+    st.table(utils.build_entry_table_data(entries, members=ledger.members))
 
 
 def edit_entry(ledger: Ledger) -> None:

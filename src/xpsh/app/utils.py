@@ -1,6 +1,8 @@
 import itertools
+from typing import Any
 
 from xpsh import Expense
+from xpsh import IndexedLedgerEntry
 from xpsh import LedgerEntry
 from xpsh import Transfer
 
@@ -44,3 +46,34 @@ def format_assignment(entry: LedgerEntry, member_color_map: dict[str, str]) -> s
             assignments_str.append(f":color[**{name}**={100 * fraction:.2f}%]{{foreground='{color}'}}")
         return ", ".join(assignments_str)
     raise ValueError(f"Unknown entry type: {entry}")
+
+
+def build_entry_table_data(entries: list[IndexedLedgerEntry], members: list[str]) -> dict[str, list[Any]]:
+    member_color_map = build_member_color_map(members, COLOR_PALETTE)
+
+    date = []
+    payer = []
+    quantity = []
+    concept = []
+    assignment = []
+    for _, entry in entries[::-1]:
+        date.append(entry.date.strftime(DATE_FMT))
+        payer.append(format_member_name(entry.payer, member_color_map))
+        if isinstance(entry, Expense):
+            quantity.append(
+                f"{entry.quantity}"
+                if entry.quantity >= 0.0
+                else f":color[{-entry.quantity}]{{foreground='{COLOR_REIMBURSEMENT_TYPE}'}}"
+            )
+            concept.append(
+                entry.concept
+                if entry.quantity >= 0.0
+                else f":color[{entry.concept}]{{foreground='{COLOR_REIMBURSEMENT_TYPE}'}}"
+            )
+        else:
+            quantity.append(f":color[{entry.quantity}]{{foreground='{COLOR_TRANSFER_TYPE}'}}")
+            concept.append(f":color[Transfer]{{foreground='{COLOR_TRANSFER_TYPE}'}}")
+
+        assignment.append(format_assignment(entry, member_color_map))
+
+    return {"Date": date, "Payer": payer, "Quantity": quantity, "Concept": concept, "Assignment/Recipient": assignment}
