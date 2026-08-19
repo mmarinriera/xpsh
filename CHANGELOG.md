@@ -2,6 +2,23 @@
 
 <!-- version list -->
 
+## v0.10.0 (2026-08-19)
+
+### Continuous Integration
+
+- Add complexipy pre-commit hook
+  ([`d23151e`](https://github.com/mmarinriera/xpsh/commit/d23151eed6703b90af777a993bddd3a8e0eb79d2))
+
+### Features
+
+- **app**: Edit and delete entries ([#14](https://github.com/mmarinriera/xpsh/pull/14),
+  [`81a5083`](https://github.com/mmarinriera/xpsh/commit/81a5083fff7036261b4a3563458959168d46c55b))
+
+- **app**: Separate tab to search, select, and edit or delete entry.
+  ([#14](https://github.com/mmarinriera/xpsh/pull/14),
+  [`81a5083`](https://github.com/mmarinriera/xpsh/commit/81a5083fff7036261b4a3563458959168d46c55b))
+
+
 ## v0.9.0 (2026-08-17)
 
 ### Features
