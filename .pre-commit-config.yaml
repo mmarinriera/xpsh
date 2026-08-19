@@ -32,6 +32,7 @@ repos:
     hooks:
       - id: complexipy
         name: Check code cognitive complexity
+        args: ["--failed"]
 
 -   repo: https://github.com/commitizen-tools/commitizen
     rev: v4.16.5
