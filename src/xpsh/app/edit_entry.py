@@ -95,7 +95,7 @@ def _delete_entry(idx: int, ledger: Ledger) -> None:
         st.rerun()
 
 
-def _entry_table_with_filters(ledger: Ledger) -> None:
+def edit_entry(ledger: Ledger) -> None:
     st.markdown("## Edit or delete an entry")
     st.markdown("### 🔍 Search entry")
     col0, col1 = st.columns(2)
@@ -139,7 +139,3 @@ def _entry_table_with_filters(ledger: Ledger) -> None:
 
     if st.button("❌ Delete selected entry!"):
         _delete_entry(entry_index, ledger=ledger)
-
-
-def edit_entry(ledger: Ledger) -> None:
-    _entry_table_with_filters(ledger)

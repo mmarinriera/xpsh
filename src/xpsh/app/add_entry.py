@@ -38,7 +38,7 @@ def _submit_expense(ledger: Ledger) -> None:
         with col:
             assignment[name] = float(st.number_input(name, min_value=0, max_value=100, value=1))
 
-    if st.button("Submit expense!"):
+    if st.button(":heavy_plus_sign: Submit expense!"):
         if not concept:
             st.error("Enter a name for the expense.")
             return
@@ -68,7 +68,7 @@ def _submit_reimbursement(ledger: Ledger) -> None:
         with col:
             assignment[name] = float(st.number_input(name, min_value=0, max_value=100, value=1))
 
-    if st.button("Submit reimbursement!"):
+    if st.button(":heavy_plus_sign: Submit reimbursement!"):
         expense = Expense(payer=recipient, quantity=-quantity, concept=concept, assignment=assignment, date=date)
         ledger.add_expense(expense)
         ledger.save_to_file()
@@ -86,7 +86,7 @@ def _submit_transfer(ledger: Ledger) -> None:
         quantity = st.number_input("Quantity payed", min_value=0.01)
     recipient = st.selectbox("Who received the transfer?", options=ledger.members)
 
-    if st.button("Submit transfer!"):
+    if st.button(":heavy_plus_sign: Submit transfer!"):
         if payer == recipient:
             st.error("Select two different people to make a transfer.")
             return
