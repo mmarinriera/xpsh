@@ -103,7 +103,7 @@ def edit_entry(ledger: Ledger) -> None:
         start_date = st.date_input("Start date", value=None, format=utils.DATE_INPUT_FMT)
         end_date = st.date_input("End date", value=None, format=utils.DATE_INPUT_FMT)
     with col1:
-        filter_by_payer = st.selectbox("Filter by payer", options=ledger.members)
+        filter_by_payer = st.selectbox("Filter by payer", options=[None] + ledger.members, index=0)
         filter_by_concept = st.text_input("Filter by concept", value=None)
     include_transfers = st.checkbox("Include transfers", value=True)
 
