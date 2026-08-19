@@ -96,10 +96,9 @@ def _delete_entry(idx: int, ledger: Ledger) -> None:
 
 
 def _entry_table_with_filters(ledger: Ledger) -> None:
-    st.header("Search entries")
-
+    st.markdown("## Edit or delete an entry")
+    st.markdown("### 🔍 Search entry")
     col0, col1 = st.columns(2)
-
     with col0:
         start_date = st.date_input("Start date", value=None, format=utils.DATE_INPUT_FMT)
         end_date = st.date_input("End date", value=None, format=utils.DATE_INPUT_FMT)
@@ -118,6 +117,7 @@ def _entry_table_with_filters(ledger: Ledger) -> None:
 
     entry_df = utils.build_entry_df(entries)
 
+    st.markdown("### Select a row")
     event = st.dataframe(
         utils.format_entry_df(entry_df, ledger.members),
         on_select="rerun",
@@ -130,7 +130,7 @@ def _entry_table_with_filters(ledger: Ledger) -> None:
     if selected_row is None:
         return
 
-    st.subheader("Edit or delete selected entry.")
+    st.markdown("### Modify data")
     entry_index = entry_df.at[selected_row, "Ledger Index"]
     selected_entry = ledger.get_entry(entry_index)
     updated_entry = _edit_entry_input(selected_entry, members=ledger.members)

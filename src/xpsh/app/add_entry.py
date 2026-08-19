@@ -20,7 +20,7 @@ def _parse_calculator_input(expression: str) -> float:
 
 
 def _submit_expense(ledger: Ledger) -> None:
-    st.subheader("Submit an expense")
+    st.markdown("## Submit an expense")
 
     date = st.date_input("Date of expense", value="today", format=utils.DATE_INPUT_FMT)
     col_payer, col_quantity = st.columns(2)
@@ -50,7 +50,7 @@ def _submit_expense(ledger: Ledger) -> None:
 
 
 def _submit_reimbursement(ledger: Ledger) -> None:
-    st.subheader("Submit a reimbursement")
+    st.markdown("## Submit a reimbursement")
 
     date = st.date_input("Date of reimbursement", value="today", format=utils.DATE_INPUT_FMT)
     col_recipient, col_quantity = st.columns(2)
@@ -76,7 +76,7 @@ def _submit_reimbursement(ledger: Ledger) -> None:
 
 
 def _submit_transfer(ledger: Ledger) -> None:
-    st.subheader("Submit an transfer")
+    st.markdown("## Submit a transfer")
 
     date = st.date_input("Date of expense", value="today", format=utils.DATE_INPUT_FMT)
     col_payer, col_quantity = st.columns(2)
