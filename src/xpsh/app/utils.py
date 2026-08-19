@@ -1,6 +1,9 @@
 import itertools
 from typing import Any
 
+import numpy as np
+import pandas as pd
+
 from xpsh import Expense
 from xpsh import IndexedLedgerEntry
 from xpsh import LedgerEntry
@@ -48,9 +51,8 @@ def format_assignment(entry: LedgerEntry, member_color_map: dict[str, str]) -> s
     raise ValueError(f"Unknown entry type: {entry}")
 
 
-def build_entry_table_data(entries: list[IndexedLedgerEntry], members: list[str]) -> dict[str, list[Any]]:
-    member_color_map = build_member_color_map(members, COLOR_PALETTE)
-
+def _build_table_data(entries: list[IndexedLedgerEntry]) -> dict[str, list[Any]]:
+    entry_type = []
     date = []
     payer = []
     quantity = []
@@ -58,22 +60,54 @@ def build_entry_table_data(entries: list[IndexedLedgerEntry], members: list[str]
     assignment = []
     for _, entry in entries[::-1]:
         date.append(entry.date.strftime(DATE_FMT))
-        payer.append(format_member_name(entry.payer, member_color_map))
+        payer.append(entry.payer)
+        quantity.append(entry.quantity)
         if isinstance(entry, Expense):
-            quantity.append(
-                f"{entry.quantity}"
-                if entry.quantity >= 0.0
-                else f":color[{-entry.quantity}]{{foreground='{COLOR_REIMBURSEMENT_TYPE}'}}"
-            )
-            concept.append(
-                entry.concept
-                if entry.quantity >= 0.0
-                else f":color[{entry.concept}]{{foreground='{COLOR_REIMBURSEMENT_TYPE}'}}"
-            )
+            entry_type.append("Expense" if entry.quantity >= 0.0 else "Reimbursement")
+            concept.append(entry.concept)
+            assignment_str = [f"{n}={100 * v:.2f}%" for n, v in entry.assignment.items()]
+            assignment.append(", ".join(assignment_str))
+        elif isinstance(entry, Transfer):
+            entry_type.append("Transfer")
+            concept.append("-")
+            assignment.append(entry.recipient)
         else:
-            quantity.append(f":color[{entry.quantity}]{{foreground='{COLOR_TRANSFER_TYPE}'}}")
-            concept.append(f":color[Transfer]{{foreground='{COLOR_TRANSFER_TYPE}'}}")
+            raise ValueError("Unknown entry type.")
 
-        assignment.append(format_assignment(entry, member_color_map))
+    return {
+        "Type": entry_type,
+        "Date": date,
+        "Payer": payer,
+        "Quantity": quantity,
+        "Concept": concept,
+        "Assignment/Recipient": assignment,
+    }
 
-    return {"Date": date, "Payer": payer, "Quantity": quantity, "Concept": concept, "Assignment/Recipient": assignment}
+
+def build_entry_table_df(entries: list[IndexedLedgerEntry], members: list[str]) -> pd.DataFrame:
+    member_color_map = build_member_color_map(members, COLOR_PALETTE)
+
+    def format_entry_type(s: pd.Series) -> np.ndarray:
+        if s.Type == "Transfer":
+            color = f"color:{COLOR_TRANSFER_TYPE}"
+        elif s.Type == "Reimbursement":
+            color = f"color:{COLOR_REIMBURSEMENT_TYPE}"
+        else:
+            color = ""
+
+        return np.array([color, "", "", color, color, ""])
+
+    def format_name(value: str) -> str:
+        return f"color:{member_color_map.get(value, '')}"
+
+    def format_quantity(value: float) -> str:
+        return f"color:{COLOR_REIMBURSEMENT_TYPE}" if value < 0.0 else ""
+
+    df = pd.DataFrame(_build_table_data(entries))
+    df = (
+        df.style.format({"Quantity": "{:.2f}"})
+        .apply(format_entry_type, axis=1)  # ty: ignore[unresolved-attribute]
+        .map(format_quantity, subset="Quantity")
+        .map(format_name, subset=["Payer", "Assignment/Recipient"])
+    )
+    return df

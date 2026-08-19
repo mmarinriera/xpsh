@@ -100,7 +100,7 @@ def _show_last_entries(ledger: Ledger, n_last_entries: int = 10) -> None:
     entries = (
         ledger.indexed_entries[-n_last_entries:] if len(ledger.entries) > n_last_entries else ledger.indexed_entries
     )
-    st.table(utils.build_entry_table_data(entries, members=ledger.members))
+    st.dataframe(utils.build_entry_table_df(entries, members=ledger.members), hide_index=True)
 
 
 def _show_balance(ledger: Ledger) -> None:

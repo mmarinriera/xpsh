@@ -26,7 +26,15 @@ def _entry_table_with_filters(ledger: Ledger) -> None:
         include_transfers=include_transfers,
     )
 
-    st.table(utils.build_entry_table_data(entries, members=ledger.members))
+    event = st.dataframe(
+        utils.build_entry_table_df(entries, members=ledger.members),
+        on_select="rerun",
+        selection_mode="single-row",
+        hide_index=True,
+    )
+
+    row = event.selection.rows
+    st.info(f"selected {row}")
 
 
 def edit_entry(ledger: Ledger) -> None:
