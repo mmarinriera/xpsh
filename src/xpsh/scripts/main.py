@@ -254,7 +254,7 @@ def examples() -> None:
 
 @xpsh.command
 @click.argument("file_path", type=str)
-@click.argument("payer", type=str)
+@click.option("-p", "--payer", "payer", type=str, default=None, help="Filter entries by payer.")
 @click.option("-c", "--concept", "concept", type=str, default=None, help="Filter entries by concept.")
 @click.option(
     "-f", "--from", "start_date", type=str, default=None, help="Filter entries later than date ('dd/mm/yyy' format)."
@@ -265,13 +265,22 @@ def examples() -> None:
 @click.option("-t", "--include-transfers", "include_transfers", is_flag=True, help="Include transfers in the search.")
 def search(
     file_path: str,
-    payer: str,
+    payer: str | None,
     concept: str | None,
     start_date: str | None,
     end_date: str | None,
     include_transfers: bool,
 ) -> None:
-    """Search a ledger for an entry."""
+    """
+    Search a ledger for an entry.
+
+    FILE_PATH is the path to the ledger file to be loaded.
+
+    HINT: You can load one of the example ledgers by passing a keyword instead of FILE_PATH.
+
+    Run `xpsh examples` to check the available examples.
+
+    """
     resolved_path = _resolve_input_path(file_path)
     ledger = Ledger(file_path=resolved_path)
     logger.info("Ledger loaded from file")

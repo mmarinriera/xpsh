@@ -5,6 +5,7 @@ from pathlib import Path
 
 from .ledger import Account
 from .ledger import Expense
+from .ledger import IndexedLedgerEntry
 from .ledger import Ledger
 from .ledger import LedgerEntry
 from .ledger import Transfer
@@ -45,4 +46,4 @@ def set_logging_level(level: int = logging.DEBUG) -> None:
 
 _init_logging()
 
-__all__ = ["Account", "Expense", "Ledger", "LedgerEntry", "Transfer"]
+__all__ = ["Account", "Expense", "IndexedLedgerEntry", "Ledger", "LedgerEntry", "Transfer"]

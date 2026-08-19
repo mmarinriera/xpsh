@@ -150,6 +150,7 @@ def test_search(example_search_file_path: Path, subtests: pytest.Subtests) -> No
         [
             "search",
             str(example_search_file_path),
+            "-p",
             "A",
             "-c",
             "stuff",
@@ -172,7 +173,7 @@ def test_search_no_hits(example_search_file_path: Path, subtests: pytest.Subtest
 """
 
     runner = CliRunner()
-    result = runner.invoke(xpsh, ["search", str(example_search_file_path), "A", "-c", "something"])
+    result = runner.invoke(xpsh, ["search", str(example_search_file_path), "-p", "A", "-c", "something"])
     print(result.output)
     with subtests.test("Test cli search exitcode."):
         assert result.exit_code == 0

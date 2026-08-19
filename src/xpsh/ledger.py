@@ -284,8 +284,8 @@ class Ledger:
 
         return [(i, e) for i, e in self.indexed_entries if filter_date(e)]
 
-    def _filter_by_payer(self, entries: list[IndexedLedgerEntry], payer: str) -> list[IndexedLedgerEntry]:
-        return [(i, e) for i, e in entries if e.payer == payer]
+    def _filter_by_payer(self, entries: list[IndexedLedgerEntry], payer: str | None) -> list[IndexedLedgerEntry]:
+        return [(i, e) for i, e in entries if e.payer == payer] if payer is not None else entries
 
     def _filter_transfers(self, entries: list[IndexedLedgerEntry], include_transfers: bool) -> list[IndexedLedgerEntry]:
         return [(i, e) for i, e in entries if not isinstance(e, Transfer)] if not include_transfers else entries
@@ -301,7 +301,7 @@ class Ledger:
 
     def search(
         self,
-        payer: str,
+        payer: str | None = None,
         concept: str | None = None,
         start_date: datetime.date | None = None,
         end_date: datetime.date | None = None,
@@ -311,10 +311,10 @@ class Ledger:
         Return a list of ledger filtered by different criteria.
 
         Args:
-            payer: Filter by payer name.
-            concept: Filter by concept. The value can be a substring of the concept.
-            start_date: Filter entries after that date.
-            end_date: Filter entries before that date.
+            payer: Filter by payer name. No filter is applied if 'None' is passed.
+            concept: Filter by concept. The value can be a substring of the concept. No filter is applied if 'None' is passed.
+            start_date: Filter entries after that date. No filter is applied if 'None' is passed.
+            end_date: Filter entries before that date. No filter is applied if 'None' is passed.
             include_transfers: Include any transfers matching the filtering criteria (except concept).
 
         Returns:
@@ -324,7 +324,7 @@ class Ledger:
             ValueError: If payer is not a valid member name.
 
         """
-        if payer not in self.members:
+        if payer is not None and payer not in self.members:
             raise ValueError(f"Payer {payer} doesn't exist.")
 
         filtered_entries = self._filter_by_date(start_date, end_date)

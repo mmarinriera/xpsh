@@ -225,6 +225,9 @@ def test_search(tmp_path: Path, subtests: pytest.Subtests) -> None:
     ledger.add_expense(exp_3)
     ledger.add_transfer(trans_0)
 
+    with subtests.test("Test ledger search with no filters."):
+        assert ledger.search(include_transfers=True) == [(0, exp_0), (1, exp_1), (2, exp_2), (3, exp_3), (4, trans_0)]
+
     with subtests.test("Test ledger search by payer."):
         assert ledger.search(payer="A") == [(0, exp_0), (2, exp_2)]
 
