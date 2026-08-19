@@ -5,8 +5,8 @@ import streamlit as st
 
 from xpsh import Ledger
 from xpsh import get_version
-from xpsh.app.add_entry import add_entry
-from xpsh.app.edit_entry import edit_entry
+from xpsh.app.add import add_entry
+from xpsh.app.edit_delete import edit_entry
 
 
 def main() -> None:
