@@ -8,7 +8,7 @@ from xpsh import Transfer
 from . import utils
 
 
-def _edit_expense(expense: Expense, members: list[str]) -> Expense:
+def _input_expense(expense: Expense, members: list[str]) -> Expense:
     date = st.date_input("Date of expense", value=expense.date, format=utils.DATE_INPUT_FMT)
     col_payer, col_quantity = st.columns(2)
     with col_payer:
@@ -30,7 +30,7 @@ def _edit_expense(expense: Expense, members: list[str]) -> Expense:
     return Expense(payer=payer, quantity=quantity, concept=concept, assignment=assignment, date=date)
 
 
-def _edit_reimbursement(reimbursement: Expense, members: list[str]) -> Expense:
+def _input_reimbursement(reimbursement: Expense, members: list[str]) -> Expense:
     date = st.date_input("Date of reimbursement", value=reimbursement.date, format=utils.DATE_INPUT_FMT)
     col_recipient, col_quantity = st.columns(2)
     with col_recipient:
@@ -53,7 +53,7 @@ def _edit_reimbursement(reimbursement: Expense, members: list[str]) -> Expense:
     return Expense(payer=recipient, quantity=-quantity, concept=concept, assignment=assignment, date=date)
 
 
-def _edit_transfer(transfer: Transfer, members: list[str]) -> Transfer:
+def _input_transfer(transfer: Transfer, members: list[str]) -> Transfer:
     date = st.date_input("Date of expense", value=transfer.date, format=utils.DATE_INPUT_FMT)
     col_payer, col_quantity = st.columns(2)
     with col_payer:
@@ -65,14 +65,34 @@ def _edit_transfer(transfer: Transfer, members: list[str]) -> Transfer:
     return Transfer(payer=payer, quantity=quantity, recipient=recipient, date=date)
 
 
-def _edit_entry(entry: LedgerEntry, members: list[str]) -> LedgerEntry:
+def _edit_entry_input(entry: LedgerEntry, members: list[str]) -> LedgerEntry:
     if isinstance(entry, Expense):
         if entry.quantity >= 0.0:
-            return _edit_expense(entry, members)
-        return _edit_reimbursement(entry, members)
+            return _input_expense(entry, members)
+        return _input_reimbursement(entry, members)
     if isinstance(entry, Transfer):
-        return _edit_transfer(entry, members)
+        return _input_transfer(entry, members)
     raise ValueError("Unknown entry type")
+
+
+@st.dialog(title="Are you sure?", icon="⚠️")
+def _edit_entry(entry_index: int, updated_entry: LedgerEntry, ledger: Ledger) -> None:
+    if st.button("💾 Confirm"):
+        ledger.replace_entry(entry_index, updated_entry)
+        ledger.save_to_file()
+        st.rerun()
+    if st.button("Cancel"):
+        st.rerun()
+
+
+@st.dialog(title="Are you sure?", icon="⚠️")
+def _delete_entry(idx: int, ledger: Ledger) -> None:
+    if st.button("❌ Delete"):
+        ledger.delete_entry(index=idx)
+        ledger.save_to_file()
+        st.rerun()
+    if st.button("Cancel"):
+        st.rerun()
 
 
 def _entry_table_with_filters(ledger: Ledger) -> None:
@@ -107,19 +127,18 @@ def _entry_table_with_filters(ledger: Ledger) -> None:
     )
 
     selected_row = event.selection.rows[0] if event.selection.rows else None  # ty: ignore[unresolved-attribute]
-    st.info(f"selected {selected_row}")
     if selected_row is None:
         return
 
     st.subheader("Edit or delete selected entry.")
     entry_index = entry_df.at[selected_row, "Ledger Index"]
-    st.info(f"ledger index {entry_index}")
     selected_entry = ledger.get_entry(entry_index)
-    updated_entry = _edit_entry(selected_entry, members=ledger.members)
-    if st.button("Edit entry!"):
-        ledger.replace_entry(entry_index, updated_entry)
-        ledger.save_to_file()
-        st.success("Modification saved!")
+    updated_entry = _edit_entry_input(selected_entry, members=ledger.members)
+    if st.button("💾 Edit entry!"):
+        _edit_entry(entry_index, updated_entry, ledger)
+
+    if st.button("❌ Delete selected entry!"):
+        _delete_entry(entry_index, ledger=ledger)
 
 
 def edit_entry(ledger: Ledger) -> None:
