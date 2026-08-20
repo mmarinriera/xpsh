@@ -103,7 +103,7 @@ Transfers to settle
         assert result.exit_code == 0
 
     with subtests.test("Test cli balance console output"):
-        assert result.output == TARGET_OUTPUT
+        assert result.stdout == TARGET_OUTPUT
 
 
 def test_expenses(example_file_path: Path, subtests: pytest.Subtests) -> None:
@@ -123,7 +123,7 @@ def test_expenses(example_file_path: Path, subtests: pytest.Subtests) -> None:
         assert result.exit_code == 0
 
     with subtests.test("Test cli balance console output"):
-        assert result.output == TARGET_OUTPUT
+        assert result.stdout == TARGET_OUTPUT
 
 
 def test_examples(subtests: pytest.Subtests) -> None:
@@ -165,7 +165,7 @@ def test_search(example_search_file_path: Path, subtests: pytest.Subtests) -> No
     with subtests.test("Test cli search exitcode."):
         assert result.exit_code == 0
     with subtests.test("Test cli search console output"):
-        assert result.output == TARGET_OUTPUT
+        assert result.stdout == TARGET_OUTPUT
 
 
 def test_search_no_hits(example_search_file_path: Path, subtests: pytest.Subtests) -> None:
@@ -174,11 +174,10 @@ def test_search_no_hits(example_search_file_path: Path, subtests: pytest.Subtest
 
     runner = CliRunner()
     result = runner.invoke(xpsh, ["search", str(example_search_file_path), "-p", "A", "-c", "something"])
-    print(result.output)
     with subtests.test("Test cli search exitcode."):
         assert result.exit_code == 0
     with subtests.test("Test cli search console output"):
-        assert result.output == TARGET_OUTPUT
+        assert result.stdout == TARGET_OUTPUT
 
 
 def test_add_expense(example_file_path: Path, subtests: pytest.Subtests) -> None:
@@ -290,7 +289,7 @@ The balance is settled!
         assert file_content == TARGET_FILE_CONTENT
 
     with subtests.test("Test cli add_expense console output"):
-        assert result.output == TARGET_OUTPUT
+        assert result.stdout == TARGET_OUTPUT
 
 
 def test_add_transfer(example_file_path: Path, subtests: pytest.Subtests) -> None:
@@ -361,7 +360,7 @@ The balance is settled!
         assert file_content == TARGET_FILE_CONTENT
 
     with subtests.test("Test cli add-transfer console output"):
-        assert result.output == TARGET_OUTPUT
+        assert result.stdout == TARGET_OUTPUT
 
 
 def test_delete_entry(example_file_path: Path, subtests: pytest.Subtests) -> None:
@@ -435,7 +434,7 @@ E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
 def test_delete_entry_out_of_bounds(
     example_file_path: Path, subtests: pytest.Subtests, caplog: pytest.LogCaptureFixture
 ) -> None:
-    TARGET_OUTPUT = "Index 3 does not correspond to a valid entry."
+    TARGET_OUTPUT = "Index does not correspond to a valid entry: 3. Aborting."
     runner = CliRunner()
     result = runner.invoke(
         xpsh,
@@ -530,7 +529,7 @@ E,02/01/2000,A,15.0,Other,A:0.75,B:0.25
 def test_edit_entry_out_of_bounds(
     example_file_path: Path, subtests: pytest.Subtests, caplog: pytest.LogCaptureFixture
 ) -> None:
-    TARGET_OUTPUT = "Index 3 does not correspond to a valid entry."
+    TARGET_OUTPUT = "Index does not correspond to a valid entry: 3. Aborting."
     runner = CliRunner()
     result = runner.invoke(
         xpsh,
