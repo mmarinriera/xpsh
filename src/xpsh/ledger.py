@@ -187,9 +187,11 @@ class Ledger:
     def __post_init__(self) -> None:
         self._lock = FileLock(self.file_path.with_name(f".{self.file_path.name}.lock"), timeout=LOCK_TIMEOUT_SECONDS)
         if self.file_path.exists() and not self.overwrite:
+            logger.debug("Loading ledger from file.")
             self.load_data_from_file()
             return
 
+        logger.debug(f"Creating new ledger in {self.file_path}.")
         _member_list_sanity_check(self.members)
 
         if self.track_history:
@@ -349,7 +351,7 @@ class Ledger:
 
         """
         if index < 0 or index > len(self.entries) - 1:
-            raise ValueError("Index out of bounds.")
+            raise ValueError(f"Index does not correspond to a valid entry: {index}.")
 
         return self.entries[index]
 
@@ -366,9 +368,9 @@ class Ledger:
 
         """
         if expense.payer not in self.members:
-            raise ValueError(f"Expense payer not in members. '{expense.payer}'")
+            raise ValueError(f"Expense payer not in members. '{expense.payer}'.")
         if any([m not in self.members for m in expense.assignment]):
-            raise ValueError(f"Some recipient not in members. {list(expense.assignment.keys())}")
+            raise ValueError(f"Some recipient not in members. {list(expense.assignment.keys())}.")
 
         self.entries.append(expense)
 
@@ -394,9 +396,9 @@ class Ledger:
 
         """
         if transfer.payer not in self.members:
-            raise ValueError(f"Transfer payer not in members. '{transfer.payer}'")
+            raise ValueError(f"Transfer payer not in members. '{transfer.payer}'.")
         if transfer.recipient not in self.members:
-            raise ValueError(f"Transfer recipient not in members. '{transfer.recipient}'")
+            raise ValueError(f"Transfer recipient not in members. '{transfer.recipient}'.")
 
         self.entries.append(transfer)
 
@@ -420,7 +422,7 @@ class Ledger:
 
         """
         if index < 0 or index > len(self.entries) - 1:
-            raise ValueError("Index out of bounds.")
+            raise ValueError(f"Index does not correspond to a valid entry: {index}.")
 
         self.entries.pop(index)
 
@@ -437,7 +439,7 @@ class Ledger:
 
         """
         if index < 0 or index > len(self.entries) - 1:
-            raise ValueError("Index out of bounds.")
+            raise ValueError(f"Index does not correspond to a valid entry: {index}.")
 
         self.entries[index] = entry
 
