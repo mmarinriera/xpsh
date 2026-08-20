@@ -3,6 +3,8 @@
 import logging
 from pathlib import Path
 
+from rich.logging import RichHandler
+
 from .ledger import Account
 from .ledger import Expense
 from .ledger import IndexedLedgerEntry
@@ -11,7 +13,7 @@ from .ledger import LedgerEntry
 from .ledger import Transfer
 
 VERSION = "0.10.0"
-LOG_FORMAT = "%(asctime)s | [%(name)s] %(levelname)s - %(message)s"
+LOG_FORMAT = "[%(name)s] - %(message)s"
 
 
 def get_version() -> str:
@@ -26,7 +28,7 @@ def get_resource(file_name: str) -> Path:
 def _init_logging() -> None:
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
-    handler = logging.StreamHandler()
+    handler = RichHandler(omit_repeated_times=False)
     handler.setFormatter(logging.Formatter(LOG_FORMAT))
     logger.addHandler(handler)
 
