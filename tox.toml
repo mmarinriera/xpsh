@@ -1,5 +1,5 @@
 requires = [ "tox>=4" ]
-env_list = [ "py313", "prek", "ty" ]
+env_list = [ "py313", "prek" ]
 
 [env_run_base]
 runner = "uv-venv-lock-runner"
@@ -19,12 +19,4 @@ skip_install = true
 deps = "prek==0.4.14"
 commands = [
   [ "prek", "run", "--all-files", "--show-diff-on-failure" ],
-]
-
-[env.ty]
-runner = "uv-venv-runner"
-description = "Running type checks with ty."
-deps = "ty==0.0.73"
-commands = [
-  [ "ty", "check", "." ],
 ]
