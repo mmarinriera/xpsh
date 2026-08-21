@@ -15,10 +15,11 @@ from xpsh.scripts.main import xpsh
 
 
 @pytest.fixture
-def patch_console(monkeypatch: pytest.MonkeyPatch) -> Console:
-    test_console = Console(width=120, file=StringIO())
+def console_output(monkeypatch: pytest.MonkeyPatch) -> StringIO:
+    buffer = StringIO()
+    test_console = Console(width=120, file=buffer)
     monkeypatch.setattr(console, "CONSOLE", test_console)
-    return test_console
+    return buffer
 
 
 def _strip_output(content: str) -> str:
@@ -99,7 +100,7 @@ def test_create_existing_file_force(example_file_path: Path, subtests: pytest.Su
         assert file_content == TARGET_FILE_CONTENT
 
 
-def test_balance(example_file_path: Path, subtests: pytest.Subtests, patch_console: Console) -> None:
+def test_balance(example_file_path: Path, subtests: pytest.Subtests, console_output: StringIO) -> None:
     TARGET_OUTPUT = """Balance
 ┏━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━┓
 ┃ Member ┃ Total spent ┃ Total paid ┃  Owed ┃
@@ -121,11 +122,10 @@ Transfers to settle
         assert result.exit_code == 0
 
     with subtests.test("Test cli balance console output"):
-        output = patch_console.file.getvalue()  # ty: ignore[unresolved-attribute]
-        assert _strip_output(output) == TARGET_OUTPUT
+        assert _strip_output(console_output.getvalue()) == TARGET_OUTPUT
 
 
-def test_expenses(example_file_path: Path, subtests: pytest.Subtests, patch_console: Console) -> None:
+def test_expenses(example_file_path: Path, subtests: pytest.Subtests, console_output: StringIO) -> None:
     TARGET_OUTPUT = """Entries
 ┏━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃ Index ┃    Type ┃       Date ┃ Paid by ┃ Quantity ┃    Concept ┃ Assignment / Recipient ┃
@@ -141,8 +141,7 @@ def test_expenses(example_file_path: Path, subtests: pytest.Subtests, patch_cons
         assert result.exit_code == 0
 
     with subtests.test("Test cli expenses console output"):
-        output = patch_console.file.getvalue()  # ty: ignore[unresolved-attribute]
-        assert _strip_output(output) == TARGET_OUTPUT
+        assert _strip_output(console_output.getvalue()) == TARGET_OUTPUT
 
 
 def test_examples(subtests: pytest.Subtests) -> None:
@@ -152,7 +151,7 @@ def test_examples(subtests: pytest.Subtests) -> None:
         assert result.exit_code == 0
 
 
-def test_search(example_search_file_path: Path, subtests: pytest.Subtests, patch_console: Console) -> None:
+def test_search(example_search_file_path: Path, subtests: pytest.Subtests, console_output: StringIO) -> None:
     TARGET_OUTPUT = """Entries
 ┏━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃ Index ┃     Type ┃       Date ┃ Paid by ┃ Quantity ┃         Concept ┃ Assignment / Recipient ┃
@@ -183,11 +182,10 @@ def test_search(example_search_file_path: Path, subtests: pytest.Subtests, patch
     with subtests.test("Test cli search exitcode."):
         assert result.exit_code == 0
     with subtests.test("Test cli search console output"):
-        output = patch_console.file.getvalue()  # ty: ignore[unresolved-attribute]
-        assert _strip_output(output) == TARGET_OUTPUT
+        assert _strip_output(console_output.getvalue()) == TARGET_OUTPUT
 
 
-def test_search_no_hits(example_search_file_path: Path, subtests: pytest.Subtests, patch_console: Console) -> None:
+def test_search_no_hits(example_search_file_path: Path, subtests: pytest.Subtests, console_output: StringIO) -> None:
     TARGET_OUTPUT = "No entries found matching the criteria."
 
     runner = CliRunner()
@@ -195,8 +193,7 @@ def test_search_no_hits(example_search_file_path: Path, subtests: pytest.Subtest
     with subtests.test("Test cli search exitcode."):
         assert result.exit_code == 0
     with subtests.test("Test cli search console output"):
-        output = patch_console.file.getvalue()  # ty: ignore[unresolved-attribute]
-        assert _strip_output(output) == TARGET_OUTPUT
+        assert _strip_output(console_output.getvalue()) == TARGET_OUTPUT
 
 
 def test_add_expense(example_file_path: Path, subtests: pytest.Subtests) -> None:
@@ -263,7 +260,7 @@ E,{current_date},A,25.0,Even more stuff,A:0.5,B:0.5
         assert file_content == TARGET_FILE_CONTENT
 
 
-def test_add_expense_no_save(example_file_path: Path, subtests: pytest.Subtests, patch_console: Console) -> None:
+def test_add_expense_no_save(example_file_path: Path, subtests: pytest.Subtests, console_output: StringIO) -> None:
     TARGET_FILE_CONTENT = """A,B
 E,01/01/2000,A,10.0,Stuff,A:0.5,B:0.5
 E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
@@ -307,8 +304,7 @@ The balance is settled!"""
         assert file_content == TARGET_FILE_CONTENT
 
     with subtests.test("Test cli add_expense console output"):
-        output = patch_console.file.getvalue()  # ty: ignore[unresolved-attribute]
-        assert _strip_output(output) == TARGET_OUTPUT
+        assert _strip_output(console_output.getvalue()) == TARGET_OUTPUT
 
 
 def test_add_transfer(example_file_path: Path, subtests: pytest.Subtests) -> None:
@@ -351,7 +347,7 @@ T,{current_date},A,5.0,B
         assert file_content == TARGET_FILE_CONTENT
 
 
-def test_add_transfer_no_save(example_file_path: Path, subtests: pytest.Subtests, patch_console: Console) -> None:
+def test_add_transfer_no_save(example_file_path: Path, subtests: pytest.Subtests, console_output: StringIO) -> None:
     TARGET_FILE_CONTENT = """A,B
 E,01/01/2000,A,10.0,Stuff,A:0.5,B:0.5
 E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
@@ -378,8 +374,7 @@ The balance is settled!"""
         assert file_content == TARGET_FILE_CONTENT
 
     with subtests.test("Test cli add-transfer console output"):
-        output = patch_console.file.getvalue()  # ty: ignore[unresolved-attribute]
-        assert _strip_output(output) == TARGET_OUTPUT
+        assert _strip_output(console_output.getvalue()) == TARGET_OUTPUT
 
 
 def test_delete_entry(example_file_path: Path, subtests: pytest.Subtests) -> None:
