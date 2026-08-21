@@ -10,7 +10,7 @@ env:
 
 jobs:
   semantic_version:
-    runs-on: 
+    runs-on:
       - ubuntu-latest
     concurrency: release
     permissions:
