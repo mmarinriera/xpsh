@@ -16,7 +16,7 @@ with_dev = true
 runner = "uv-venv-runner"
 description = "Running pre-commit checks (formatting, linting, type checking) with prek."
 skip_install = true
-deps = "prek==0.4.13"
+deps = "prek==0.4.14"
 commands = [
   [ "prek", "run", "--all-files", "--show-diff-on-failure" ],
 ]
@@ -24,7 +24,7 @@ commands = [
 [env.ty]
 runner = "uv-venv-runner"
 description = "Running type checks with ty."
-deps = "ty==0.0.70"
+deps = "ty==0.0.73"
 commands = [
   [ "ty", "check", "." ],
 ]
