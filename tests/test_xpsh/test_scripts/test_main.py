@@ -89,7 +89,7 @@ def test_create_existing_file_force(example_file_path: Path, subtests: pytest.Su
         assert file_content == TARGET_FILE_CONTENT
 
 
-def test_balance(example_file_path: Path, subtests: pytest.Subtests) -> None:
+def test_balance(example_file_path: Path, subtests: pytest.Subtests, capsys: pytest.CaptureFixture) -> None:
     TARGET_OUTPUT = """Balance
 ┏━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━┓
 ┃ Member ┃ Total spent ┃ Total paid ┃  Owed ┃
@@ -111,17 +111,22 @@ Transfers to settle
         assert result.exit_code == 0
 
     with subtests.test("Test cli balance console output"):
-        assert _strip_output(result.stdout) == TARGET_OUTPUT
+        captured = capsys.readouterr()
+        assert _strip_output(captured.out) == TARGET_OUTPUT
 
 
-def test_expenses(example_file_path: Path, subtests: pytest.Subtests) -> None:
+def test_expenses(example_file_path: Path, subtests: pytest.Subtests, capsys: pytest.CaptureFixture) -> None:
     TARGET_OUTPUT = """Entries
-┏━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ Index ┃    Type ┃       Date ┃ Paid by ┃ Quantity ┃    Concept ┃ Assignment / Recipient ┃
-┡━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
-│     0 │ Expense │ 01/01/2000 │       A │    10.00 │      Stuff │ A=50.00%, B=50.00%     │
-│     1 │ Expense │ 01/01/2000 │       B │    20.00 │ More stuff │ A=50.00%, B=50.00%     │
-└───────┴─────────┴────────────┴─────────┴──────────┴────────────┴────────────────────────┘"""
+┏━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┓
+┃       ┃         ┃           ┃         ┃          ┃           ┃ Assignme… ┃
+┃       ┃         ┃           ┃         ┃          ┃           ┃ /         ┃
+┃ Index ┃    Type ┃      Date ┃ Paid by ┃ Quantity ┃   Concept ┃ Recipient ┃
+┡━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━┩
+│     0 │ Expense │ 01/01/20… │       A │    10.00 │     Stuff │ A=50.00%, │
+│       │         │           │         │          │           │ B=50.00%  │
+│     1 │ Expense │ 01/01/20… │       B │    20.00 │      More │ A=50.00%, │
+│       │         │           │         │          │     stuff │ B=50.00%  │
+└───────┴─────────┴───────────┴─────────┴──────────┴───────────┴───────────┘"""
 
     runner = CliRunner()
     result = runner.invoke(xpsh, ["expenses", str(example_file_path)])
@@ -130,7 +135,8 @@ def test_expenses(example_file_path: Path, subtests: pytest.Subtests) -> None:
         assert result.exit_code == 0
 
     with subtests.test("Test cli balance console output"):
-        assert _strip_output(result.stdout) == TARGET_OUTPUT
+        captured = capsys.readouterr()
+        assert _strip_output(captured.out) == TARGET_OUTPUT
 
 
 def test_examples(subtests: pytest.Subtests) -> None:
@@ -140,15 +146,20 @@ def test_examples(subtests: pytest.Subtests) -> None:
         assert result.exit_code == 0
 
 
-def test_search(example_search_file_path: Path, subtests: pytest.Subtests) -> None:
+def test_search(example_search_file_path: Path, subtests: pytest.Subtests, capsys: pytest.CaptureFixture) -> None:
     TARGET_OUTPUT = """Entries
-┏━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ Index ┃     Type ┃       Date ┃ Paid by ┃ Quantity ┃         Concept ┃ Assignment / Recipient ┃
-┡━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
-│     3 │  Expense │ 03/01/2000 │       A │    20.00 │ Even more stuff │ A=50.00%, B=50.00%     │
-│     4 │ Transfer │ 03/01/2000 │       A │    10.00 │               - │ B                      │
-│     6 │  Expense │ 05/01/2000 │       A │    20.00 │  And more stuff │ A=50.00%, B=50.00%     │
-└───────┴──────────┴────────────┴─────────┴──────────┴─────────────────┴────────────────────────┘"""
+┏━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━┓
+┃       ┃          ┃           ┃         ┃          ┃          ┃ Assignme… ┃
+┃       ┃          ┃           ┃         ┃          ┃          ┃ /         ┃
+┃ Index ┃     Type ┃      Date ┃ Paid by ┃ Quantity ┃  Concept ┃ Recipient ┃
+┡━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━┩
+│     3 │  Expense │ 03/01/20… │       A │    20.00 │     Even │ A=50.00%, │
+│       │          │           │         │          │     more │ B=50.00%  │
+│       │          │           │         │          │    stuff │           │
+│     4 │ Transfer │ 03/01/20… │       A │    10.00 │        - │ B         │
+│     6 │  Expense │ 05/01/20… │       A │    20.00 │ And more │ A=50.00%, │
+│       │          │           │         │          │    stuff │ B=50.00%  │
+└───────┴──────────┴───────────┴─────────┴──────────┴──────────┴───────────┘"""
 
     runner = CliRunner()
     result = runner.invoke(
@@ -171,10 +182,13 @@ def test_search(example_search_file_path: Path, subtests: pytest.Subtests) -> No
     with subtests.test("Test cli search exitcode."):
         assert result.exit_code == 0
     with subtests.test("Test cli search console output"):
-        assert _strip_output(result.stdout) == TARGET_OUTPUT
+        captured = capsys.readouterr()
+        assert _strip_output(captured.out) == TARGET_OUTPUT
 
 
-def test_search_no_hits(example_search_file_path: Path, subtests: pytest.Subtests) -> None:
+def test_search_no_hits(
+    example_search_file_path: Path, subtests: pytest.Subtests, capsys: pytest.CaptureFixture
+) -> None:
     TARGET_OUTPUT = "No entries found matching the criteria."
 
     runner = CliRunner()
@@ -182,7 +196,8 @@ def test_search_no_hits(example_search_file_path: Path, subtests: pytest.Subtest
     with subtests.test("Test cli search exitcode."):
         assert result.exit_code == 0
     with subtests.test("Test cli search console output"):
-        assert _strip_output(result.stdout) == TARGET_OUTPUT
+        captured = capsys.readouterr()
+        assert _strip_output(captured.out) == TARGET_OUTPUT
 
 
 def test_add_expense(example_file_path: Path, subtests: pytest.Subtests) -> None:
@@ -249,7 +264,7 @@ E,{current_date},A,25.0,Even more stuff,A:0.5,B:0.5
         assert file_content == TARGET_FILE_CONTENT
 
 
-def test_add_expense_no_save(example_file_path: Path, subtests: pytest.Subtests) -> None:
+def test_add_expense_no_save(example_file_path: Path, subtests: pytest.Subtests, capsys: pytest.CaptureFixture) -> None:
     TARGET_FILE_CONTENT = """A,B
 E,01/01/2000,A,10.0,Stuff,A:0.5,B:0.5
 E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
@@ -293,7 +308,8 @@ The balance is settled!"""
         assert file_content == TARGET_FILE_CONTENT
 
     with subtests.test("Test cli add_expense console output"):
-        assert _strip_output(result.stdout) == TARGET_OUTPUT
+        captured = capsys.readouterr()
+        assert _strip_output(captured.out) == TARGET_OUTPUT
 
 
 def test_add_transfer(example_file_path: Path, subtests: pytest.Subtests) -> None:
@@ -336,7 +352,9 @@ T,{current_date},A,5.0,B
         assert file_content == TARGET_FILE_CONTENT
 
 
-def test_add_transfer_no_save(example_file_path: Path, subtests: pytest.Subtests) -> None:
+def test_add_transfer_no_save(
+    example_file_path: Path, subtests: pytest.Subtests, capsys: pytest.CaptureFixture
+) -> None:
     TARGET_FILE_CONTENT = """A,B
 E,01/01/2000,A,10.0,Stuff,A:0.5,B:0.5
 E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
@@ -363,7 +381,8 @@ The balance is settled!"""
         assert file_content == TARGET_FILE_CONTENT
 
     with subtests.test("Test cli add-transfer console output"):
-        assert _strip_output(result.stdout) == TARGET_OUTPUT
+        captured = capsys.readouterr()
+        assert _strip_output(captured.out) == TARGET_OUTPUT
 
 
 def test_delete_entry(example_file_path: Path, subtests: pytest.Subtests) -> None:
