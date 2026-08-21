@@ -36,15 +36,21 @@ COLOR_PALETTE = [
     122,  # "aquamarine1"
 ]
 
-PLOT_PAD = (1, 2)
+PAD = (1, 2, 0, 2)
 
 STYLE_DIFF_OLD = "bold red"
 STYLE_DIFF_NEW = "bold green"
 STYLE_NO_DIFF = ""
 
+CONSOLE = Console()
+
 
 def _build_member_color_map(members: list[str], color_palette: list[int]) -> dict[str, str]:
     return {m: f"color({c})" for m, c in zip(members, itertools.cycle(color_palette))}
+
+
+def _print_to_console(output: Any) -> None:
+    CONSOLE.print(Padding(output, pad=PAD))
 
 
 class AssignmentDictRenderer:
@@ -157,8 +163,7 @@ def print_balance(ledger: Ledger, plot: bool = False) -> None:
             Text(f"{account.paid:.2f}"),
             Text(f"{account.owed:.2f}", style=color_owed),
         )
-    console = Console()
-    console.print(balance)
+    _print_to_console(balance)
 
     settle = Table(title="Transfers to settle", title_justify="left")
     settle.add_column("From", justify="right", style="cyan")
@@ -168,7 +173,7 @@ def print_balance(ledger: Ledger, plot: bool = False) -> None:
     settle_transfers = ledger.settle_transfers
 
     if not settle_transfers:
-        console.print("[bold green]The balance is settled![/bold green]")
+        _print_to_console("[bold green]The balance is settled![/bold green]")
         return
 
     for transfer in settle_transfers:
@@ -178,18 +183,18 @@ def print_balance(ledger: Ledger, plot: bool = False) -> None:
             Text(f"{transfer.quantity:.2f}"),
         )
 
-    console.print(settle)
+    _print_to_console(settle)
     if not plot:
         return
 
     canvas = _balance_history_plot(
-        console.width - 2 * PLOT_PAD[1],
-        (console.height - 2 * PLOT_PAD[0]) // 2,
+        CONSOLE.width - 2 * PAD[1],
+        (CONSOLE.height - 2 * PAD[0]) // 2,
         ledger,
         title="Ledger balance history",
     )
 
-    console.print(Padding(plotextMixin(plot_canvas=canvas), pad=PLOT_PAD))
+    _print_to_console(plotextMixin(plot_canvas=canvas))
 
 
 def _stacked_bar_plot(width: int, dates: list[str], series: dict[str, list[float]], title: str) -> str:
@@ -224,7 +229,7 @@ def _build_expense_plot(width: int, entries: list[LedgerEntry], members: list[st
             series[m].append(v)
 
     canvas = _stacked_bar_plot(
-        width=width - 2 * PLOT_PAD[1], dates=dates, series=series, title=f"Expense history grouped by {grouped}"
+        width=width - 2 * PAD[1], dates=dates, series=series, title=f"Expense history grouped by {grouped}"
     )
     return plotextMixin(plot_canvas=canvas)
 
@@ -238,31 +243,27 @@ def print_expenses(ledger: Ledger, n_last_entries: int | None, plot: bool, group
 
     name_color_map = _build_member_color_map(ledger.members, COLOR_PALETTE)
 
-    console = Console()
-    console.print(_print_entries_table(idx_entries, name_color_map))
+    _print_to_console(_print_entries_table(idx_entries, name_color_map))
     if plot:
-        console.print(
-            Padding(
-                _build_expense_plot(console.width, [e for _, e in idx_entries], ledger.members, grouped=grouped),
-                pad=PLOT_PAD,
-            )
+        _print_to_console(
+            _build_expense_plot(CONSOLE.width, [e for _, e in idx_entries], ledger.members, grouped=grouped)
         )
 
 
 def print_search_entries(ledger: Ledger, entries: list[IndexedLedgerEntry]) -> None:
     name_color_map = _build_member_color_map(ledger.members, COLOR_PALETTE)
-    console = Console()
+
     if not entries:
-        console.print("No entries found matching the criteria.")
+        _print_to_console("No entries found matching the criteria.")
         return
 
-    console.print(_print_entries_table(entries, name_color_map))
+    _print_to_console(_print_entries_table(entries, name_color_map))
 
 
 def print_single_entry(ledger: Ledger, index: int, entry: LedgerEntry) -> None:
     name_color_map = _build_member_color_map(ledger.members, COLOR_PALETTE)
-    console = Console()
-    console.print(_print_entries_table([(index, entry)], name_color_map, title="Selected entry"))
+
+    _print_to_console(_print_entries_table([(index, entry)], name_color_map, title="Selected entry"))
 
 
 def _diff_table_resolve_common_fields(
@@ -414,8 +415,7 @@ def print_entry_diff(entry: LedgerEntry, new_entry: LedgerEntry) -> None:
         new_entry_table_input["assignment"],
     )
 
-    console = Console()
-    console.print(entry_table)
+    _print_to_console(entry_table)
 
 
 def print_examples(examples_dict: dict[str, str]) -> None:
@@ -425,6 +425,5 @@ def print_examples(examples_dict: dict[str, str]) -> None:
     for kw, descr in examples_dict.items():
         table.add_row(f"[bold cyan]{kw}[/bold cyan]", descr)
 
-    console = Console()
-    console.print(table)
-    console.print("e.g. run: [bold purple]xpsh balance fellowship[/bold purple]")
+    _print_to_console(table)
+    _print_to_console("e.g. run: [bold purple]xpsh balance fellowship[/bold purple]")

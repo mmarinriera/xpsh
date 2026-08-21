@@ -26,6 +26,10 @@ repos:
     -   id: mypy
         files: ^src/xpsh/|^tests
 
+-   repo: https://github.com/astral-sh/ty-pre-commit
+    rev: v0.0.73
+    hooks:
+    -   id: ty
 
 -   repo: https://github.com/rohaquinlop/complexipy-pre-commit
     rev: v7.0.1

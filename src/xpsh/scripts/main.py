@@ -48,21 +48,31 @@ def _add_expense(
     no_save: bool,
 ) -> None:
     resolved_path = _resolve_input_path(file_path)
-    ledger = Ledger(file_path=resolved_path)
-    logger.info("Ledger loaded from file")
+
+    try:
+        ledger = Ledger(file_path=resolved_path)
+    except ValueError as e:
+        logger.critical(f"{e} Aborting.")
+        sys.exit(1)
+
     if not assignment:
         assignment = [(n, 1) for n in ledger.members]
-    logger.info("No assignment provided. Equal parts assigned.")
+        logger.info("No assignment provided. Equal parts assigned.")
 
     assignment_dict = {v[0]: v[1] for v in assignment}
 
     if date_str is not None:
         date = datetime.datetime.strptime(date_str, DATE_OUT_FMT).date()
     else:
+        logger.info("Using current date.")
         date = datetime.date.today()
 
-    expense = Expense(payer=payer, quantity=quantity, concept=concept, assignment=assignment_dict, date=date)
-    ledger.add_expense(expense)
+    try:
+        expense = Expense(payer=payer, quantity=quantity, concept=concept, assignment=assignment_dict, date=date)
+        ledger.add_expense(expense)
+    except ValueError as e:
+        logger.critical(f"{e} Aborting.")
+        sys.exit(1)
 
     if print_output:
         console.print_balance(ledger)
@@ -191,7 +201,12 @@ def create(file_path: str, members: list[str], force: bool) -> None:
         else:
             logger.info(f"Overwriting existing file in {file_path}")
 
-    ledger = Ledger(file_path=resolved_path, members=members, overwrite=force)
+    try:
+        ledger = Ledger(file_path=resolved_path, members=members, overwrite=force)
+    except ValueError as e:
+        logger.critical(f"{e} Aborting.")
+        sys.exit(1)
+
     ledger.save_to_file()
     logger.info("New ledger saved to file.")
 
@@ -212,8 +227,13 @@ def balance(file_path: str, graph: bool) -> None:
     Run `xpsh examples` to check the available examples.
     """
     resolved_path = _resolve_input_path(file_path)
-    ledger = Ledger(file_path=resolved_path, track_history=graph)
-    logger.info("Ledger loaded from file")
+
+    try:
+        ledger = Ledger(file_path=resolved_path, track_history=graph)
+    except ValueError as e:
+        logger.critical(f"{e} Aborting.")
+        sys.exit(1)
+
     console.print_balance(ledger, graph)
 
 
@@ -240,8 +260,12 @@ def expenses(file_path: str, n_last_entries: int | None, graph: bool, grouped: s
 
     """
     resolved_path = _resolve_input_path(file_path)
-    ledger = Ledger(file_path=resolved_path)
-    logger.info("Ledger loaded from file")
+
+    try:
+        ledger = Ledger(file_path=resolved_path)
+    except ValueError as e:
+        logger.critical(f"{e} Aborting.")
+        sys.exit(1)
 
     console.print_expenses(ledger, n_last_entries, graph, grouped)
 
@@ -282,15 +306,19 @@ def search(
 
     """
     resolved_path = _resolve_input_path(file_path)
-    ledger = Ledger(file_path=resolved_path)
-    logger.info("Ledger loaded from file")
-    entries = ledger.search(
-        payer=payer,
-        concept=concept,
-        start_date=datetime.datetime.strptime(start_date, DATE_OUT_FMT).date() if start_date is not None else None,
-        end_date=datetime.datetime.strptime(end_date, DATE_OUT_FMT).date() if end_date is not None else None,
-        include_transfers=include_transfers,
-    )
+    try:
+        ledger = Ledger(file_path=resolved_path)
+
+        entries = ledger.search(
+            payer=payer,
+            concept=concept,
+            start_date=datetime.datetime.strptime(start_date, DATE_OUT_FMT).date() if start_date is not None else None,
+            end_date=datetime.datetime.strptime(end_date, DATE_OUT_FMT).date() if end_date is not None else None,
+            include_transfers=include_transfers,
+        )
+    except ValueError as e:
+        logger.critical(f"{e} Aborting.")
+        sys.exit(1)
     console.print_search_entries(ledger, entries)
 
 
@@ -485,16 +513,19 @@ def add_transfer(
     Run `xpsh examples` to check the available examples.
     """
     resolved_path = _resolve_input_path(file_path)
-    ledger = Ledger(file_path=resolved_path)
-    logger.info("Ledger loaded from file")
 
     if date_str is not None:
         date = datetime.datetime.strptime(date_str, DATE_OUT_FMT).date()
     else:
         date = datetime.date.today()
 
-    transfer = Transfer(payer=payer, quantity=quantity, recipient=recipient, date=date)
-    ledger.add_transfer(transfer)
+    try:
+        ledger = Ledger(file_path=resolved_path)
+        transfer = Transfer(payer=payer, quantity=quantity, recipient=recipient, date=date)
+        ledger.add_transfer(transfer)
+    except ValueError as e:
+        logger.critical(f"{e} Aborting.")
+        sys.exit(1)
 
     if print_output:
         console.print_balance(ledger)
@@ -522,13 +553,12 @@ def delete_entry(file_path: str, index: int, yes: bool) -> None:
 
     """
     resolved_path = _resolve_input_path(file_path)
-    ledger = Ledger(file_path=resolved_path)
-    logger.info("Ledger loaded from file")
 
     try:
+        ledger = Ledger(file_path=resolved_path)
         entry = ledger.get_entry(index)
-    except ValueError:
-        logger.critical(f"Index {index} does not correspond to a valid entry.")
+    except ValueError as e:
+        logger.critical(f"{e} Aborting.")
         sys.exit(1)
 
     console.print_single_entry(ledger, index, entry)
@@ -586,13 +616,11 @@ def edit_entry(
 
     """
     resolved_path = _resolve_input_path(file_path)
-    ledger = Ledger(file_path=resolved_path)
-    logger.info("Ledger loaded from file")
-
     try:
+        ledger = Ledger(file_path=resolved_path)
         entry = ledger.get_entry(index)
-    except ValueError:
-        logger.critical(f"Index {index} does not correspond to a valid entry.")
+    except ValueError as e:
+        logger.critical(f"{e} Aborting.")
         sys.exit(1)
 
     new_entry = _build_updated_entry(

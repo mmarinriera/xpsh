@@ -13,6 +13,8 @@ wheels/
 .ruff_cache
 # mypy
 .mypy_cache
+# complexipy
+.complexipy_cache
 
 # pytest & coverage
 .pytest_cache/

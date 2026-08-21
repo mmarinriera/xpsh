@@ -1,14 +1,34 @@
 import datetime
+from io import StringIO
 from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
+from rich.console import Console
 
 from xpsh import VERSION
+from xpsh import console
 from xpsh.ledger import DATE_OUT_FMT
 from xpsh.scripts.main import EXAMPLE_LEDGERS
 from xpsh.scripts.main import _resolve_input_path
 from xpsh.scripts.main import xpsh
+
+
+@pytest.fixture
+def console_output(monkeypatch: pytest.MonkeyPatch) -> StringIO:
+    buffer = StringIO()
+    test_console = Console(width=120, file=buffer)
+    monkeypatch.setattr(console, "CONSOLE", test_console)
+    return buffer
+
+
+def _strip_output(content: str) -> str:
+    output = []
+    for l in content.split("\n"):
+        stripped = l.strip()
+        if stripped:
+            output.append(stripped)
+    return "\n".join(output)
 
 
 def test_resolve_input_path(tmp_path: Path, subtests: pytest.Subtests) -> None:
@@ -80,21 +100,20 @@ def test_create_existing_file_force(example_file_path: Path, subtests: pytest.Su
         assert file_content == TARGET_FILE_CONTENT
 
 
-def test_balance(example_file_path: Path, subtests: pytest.Subtests) -> None:
-    TARGET_OUTPUT = """Balance                                      
+def test_balance(example_file_path: Path, subtests: pytest.Subtests, console_output: StringIO) -> None:
+    TARGET_OUTPUT = """Balance
 ┏━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━┓
 ┃ Member ┃ Total spent ┃ Total paid ┃  Owed ┃
 ┡━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━┩
 │      A │       15.00 │      10.00 │  5.00 │
 │      B │       15.00 │      20.00 │ -5.00 │
 └────────┴─────────────┴────────────┴───────┘
-Transfers to settle     
+Transfers to settle
 ┏━━━━━━┳━━━━┳━━━━━━━━━━┓
 ┃ From ┃ To ┃ Quantity ┃
 ┡━━━━━━╇━━━━╇━━━━━━━━━━┩
 │    A │  B │     5.00 │
-└──────┴────┴──────────┘
-"""
+└──────┴────┴──────────┘"""
 
     runner = CliRunner()
     result = runner.invoke(xpsh, ["balance", str(example_file_path)])
@@ -103,27 +122,26 @@ Transfers to settle
         assert result.exit_code == 0
 
     with subtests.test("Test cli balance console output"):
-        assert result.output == TARGET_OUTPUT
+        assert _strip_output(console_output.getvalue()) == TARGET_OUTPUT
 
 
-def test_expenses(example_file_path: Path, subtests: pytest.Subtests) -> None:
-    TARGET_OUTPUT = """Entries                                                                                    
+def test_expenses(example_file_path: Path, subtests: pytest.Subtests, console_output: StringIO) -> None:
+    TARGET_OUTPUT = """Entries
 ┏━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃ Index ┃    Type ┃       Date ┃ Paid by ┃ Quantity ┃    Concept ┃ Assignment / Recipient ┃
 ┡━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
 │     0 │ Expense │ 01/01/2000 │       A │    10.00 │      Stuff │ A=50.00%, B=50.00%     │
 │     1 │ Expense │ 01/01/2000 │       B │    20.00 │ More stuff │ A=50.00%, B=50.00%     │
-└───────┴─────────┴────────────┴─────────┴──────────┴────────────┴────────────────────────┘
-"""
+└───────┴─────────┴────────────┴─────────┴──────────┴────────────┴────────────────────────┘"""
 
     runner = CliRunner()
     result = runner.invoke(xpsh, ["expenses", str(example_file_path)])
 
-    with subtests.test("Test cli balance exitcode"):
+    with subtests.test("Test cli expenses exitcode"):
         assert result.exit_code == 0
 
-    with subtests.test("Test cli balance console output"):
-        assert result.output == TARGET_OUTPUT
+    with subtests.test("Test cli expenses console output"):
+        assert _strip_output(console_output.getvalue()) == TARGET_OUTPUT
 
 
 def test_examples(subtests: pytest.Subtests) -> None:
@@ -133,16 +151,15 @@ def test_examples(subtests: pytest.Subtests) -> None:
         assert result.exit_code == 0
 
 
-def test_search(example_search_file_path: Path, subtests: pytest.Subtests) -> None:
-    TARGET_OUTPUT = """Entries                                                                                          
+def test_search(example_search_file_path: Path, subtests: pytest.Subtests, console_output: StringIO) -> None:
+    TARGET_OUTPUT = """Entries
 ┏━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃ Index ┃     Type ┃       Date ┃ Paid by ┃ Quantity ┃         Concept ┃ Assignment / Recipient ┃
 ┡━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
 │     3 │  Expense │ 03/01/2000 │       A │    20.00 │ Even more stuff │ A=50.00%, B=50.00%     │
 │     4 │ Transfer │ 03/01/2000 │       A │    10.00 │               - │ B                      │
 │     6 │  Expense │ 05/01/2000 │       A │    20.00 │  And more stuff │ A=50.00%, B=50.00%     │
-└───────┴──────────┴────────────┴─────────┴──────────┴─────────────────┴────────────────────────┘
-"""
+└───────┴──────────┴────────────┴─────────┴──────────┴─────────────────┴────────────────────────┘"""
 
     runner = CliRunner()
     result = runner.invoke(
@@ -165,20 +182,18 @@ def test_search(example_search_file_path: Path, subtests: pytest.Subtests) -> No
     with subtests.test("Test cli search exitcode."):
         assert result.exit_code == 0
     with subtests.test("Test cli search console output"):
-        assert result.output == TARGET_OUTPUT
+        assert _strip_output(console_output.getvalue()) == TARGET_OUTPUT
 
 
-def test_search_no_hits(example_search_file_path: Path, subtests: pytest.Subtests) -> None:
-    TARGET_OUTPUT = """No entries found matching the criteria.
-"""
+def test_search_no_hits(example_search_file_path: Path, subtests: pytest.Subtests, console_output: StringIO) -> None:
+    TARGET_OUTPUT = "No entries found matching the criteria."
 
     runner = CliRunner()
     result = runner.invoke(xpsh, ["search", str(example_search_file_path), "-p", "A", "-c", "something"])
-    print(result.output)
     with subtests.test("Test cli search exitcode."):
         assert result.exit_code == 0
     with subtests.test("Test cli search console output"):
-        assert result.output == TARGET_OUTPUT
+        assert _strip_output(console_output.getvalue()) == TARGET_OUTPUT
 
 
 def test_add_expense(example_file_path: Path, subtests: pytest.Subtests) -> None:
@@ -245,21 +260,20 @@ E,{current_date},A,25.0,Even more stuff,A:0.5,B:0.5
         assert file_content == TARGET_FILE_CONTENT
 
 
-def test_add_expense_no_save(example_file_path: Path, subtests: pytest.Subtests) -> None:
+def test_add_expense_no_save(example_file_path: Path, subtests: pytest.Subtests, console_output: StringIO) -> None:
     TARGET_FILE_CONTENT = """A,B
 E,01/01/2000,A,10.0,Stuff,A:0.5,B:0.5
 E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
 """
 
-    TARGET_OUTPUT = """Balance                                     
+    TARGET_OUTPUT = """Balance
 ┏━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━┓
 ┃ Member ┃ Total spent ┃ Total paid ┃ Owed ┃
 ┡━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━┩
 │      A │       35.00 │      35.00 │ 0.00 │
 │      B │       20.00 │      20.00 │ 0.00 │
 └────────┴─────────────┴────────────┴──────┘
-The balance is settled!
-"""
+The balance is settled!"""
 
     runner = CliRunner()
     result = runner.invoke(
@@ -290,7 +304,7 @@ The balance is settled!
         assert file_content == TARGET_FILE_CONTENT
 
     with subtests.test("Test cli add_expense console output"):
-        assert result.output == TARGET_OUTPUT
+        assert _strip_output(console_output.getvalue()) == TARGET_OUTPUT
 
 
 def test_add_transfer(example_file_path: Path, subtests: pytest.Subtests) -> None:
@@ -333,21 +347,20 @@ T,{current_date},A,5.0,B
         assert file_content == TARGET_FILE_CONTENT
 
 
-def test_add_transfer_no_save(example_file_path: Path, subtests: pytest.Subtests) -> None:
+def test_add_transfer_no_save(example_file_path: Path, subtests: pytest.Subtests, console_output: StringIO) -> None:
     TARGET_FILE_CONTENT = """A,B
 E,01/01/2000,A,10.0,Stuff,A:0.5,B:0.5
 E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
 """
 
-    TARGET_OUTPUT = """Balance                                     
+    TARGET_OUTPUT = """Balance
 ┏━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━┓
 ┃ Member ┃ Total spent ┃ Total paid ┃ Owed ┃
 ┡━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━┩
 │      A │       15.00 │      15.00 │ 0.00 │
 │      B │       15.00 │      15.00 │ 0.00 │
 └────────┴─────────────┴────────────┴──────┘
-The balance is settled!
-"""
+The balance is settled!"""
 
     runner = CliRunner()
     result = runner.invoke(xpsh, ["add-transfer", str(example_file_path), "A", "5", "B", "-p", "--no-save"])
@@ -361,7 +374,7 @@ The balance is settled!
         assert file_content == TARGET_FILE_CONTENT
 
     with subtests.test("Test cli add-transfer console output"):
-        assert result.output == TARGET_OUTPUT
+        assert _strip_output(console_output.getvalue()) == TARGET_OUTPUT
 
 
 def test_delete_entry(example_file_path: Path, subtests: pytest.Subtests) -> None:
@@ -435,7 +448,7 @@ E,01/01/2000,B,20.0,More stuff,A:0.5,B:0.5
 def test_delete_entry_out_of_bounds(
     example_file_path: Path, subtests: pytest.Subtests, caplog: pytest.LogCaptureFixture
 ) -> None:
-    TARGET_OUTPUT = "Index 3 does not correspond to a valid entry."
+    TARGET_OUTPUT = "Index does not correspond to a valid entry: 3. Aborting."
     runner = CliRunner()
     result = runner.invoke(
         xpsh,
@@ -530,7 +543,7 @@ E,02/01/2000,A,15.0,Other,A:0.75,B:0.25
 def test_edit_entry_out_of_bounds(
     example_file_path: Path, subtests: pytest.Subtests, caplog: pytest.LogCaptureFixture
 ) -> None:
-    TARGET_OUTPUT = "Index 3 does not correspond to a valid entry."
+    TARGET_OUTPUT = "Index does not correspond to a valid entry: 3. Aborting."
     runner = CliRunner()
     result = runner.invoke(
         xpsh,

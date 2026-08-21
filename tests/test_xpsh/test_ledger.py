@@ -262,7 +262,10 @@ def test_get_entry(tmp_path: Path, subtests: pytest.Subtests) -> None:
     with subtests.test("Get entry"):
         assert ledger.get_entry(1) == exp_1
 
-    with subtests.test("Get entry out of bounds"), pytest.raises(ValueError, match="Index out of bounds."):
+    with (
+        subtests.test("Get entry out of bounds"),
+        pytest.raises(ValueError, match="Index does not correspond to a valid entry: 3."),
+    ):
         ledger.delete_entry(3)
 
 
@@ -403,7 +406,10 @@ def test_delete_entry(tmp_path: Path, subtests: pytest.Subtests) -> None:
     with subtests.test("Delete entry"):
         assert ledger.entries == [exp_0, trans_0]
 
-    with subtests.test("Delete entry out of bounds"), pytest.raises(ValueError, match="Index out of bounds."):
+    with (
+        subtests.test("Delete entry out of bounds"),
+        pytest.raises(ValueError, match="Index does not correspond to a valid entry: 2."),
+    ):
         ledger.delete_entry(2)
 
 
@@ -424,7 +430,10 @@ def test_replace_entry(tmp_path: Path, subtests: pytest.Subtests) -> None:
     with subtests.test("Replace entry"):
         assert ledger.entries[1] == exp_replace
 
-    with subtests.test("Replace entry out of bounds"), pytest.raises(ValueError, match="Index out of bounds."):
+    with (
+        subtests.test("Replace entry out of bounds"),
+        pytest.raises(ValueError, match="Index does not correspond to a valid entry: 3."),
+    ):
         ledger.replace_entry(3, exp_replace)
 
 
