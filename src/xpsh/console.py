@@ -42,14 +42,15 @@ STYLE_DIFF_OLD = "bold red"
 STYLE_DIFF_NEW = "bold green"
 STYLE_NO_DIFF = ""
 
+CONSOLE = Console()
+
 
 def _build_member_color_map(members: list[str], color_palette: list[int]) -> dict[str, str]:
     return {m: f"color({c})" for m, c in zip(members, itertools.cycle(color_palette))}
 
 
 def _print_to_console(output: Any) -> None:
-    console = Console()
-    console.print(Padding(output, pad=PAD))
+    CONSOLE.print(Padding(output, pad=PAD))
 
 
 class AssignmentDictRenderer:
@@ -186,10 +187,9 @@ def print_balance(ledger: Ledger, plot: bool = False) -> None:
     if not plot:
         return
 
-    console = Console()
     canvas = _balance_history_plot(
-        console.width - 2 * PAD[1],
-        (console.height - 2 * PAD[0]) // 2,
+        CONSOLE.width - 2 * PAD[1],
+        (CONSOLE.height - 2 * PAD[0]) // 2,
         ledger,
         title="Ledger balance history",
     )
@@ -243,11 +243,10 @@ def print_expenses(ledger: Ledger, n_last_entries: int | None, plot: bool, group
 
     name_color_map = _build_member_color_map(ledger.members, COLOR_PALETTE)
 
-    console = Console()
     _print_to_console(_print_entries_table(idx_entries, name_color_map))
     if plot:
         _print_to_console(
-            _build_expense_plot(console.width, [e for _, e in idx_entries], ledger.members, grouped=grouped)
+            _build_expense_plot(CONSOLE.width, [e for _, e in idx_entries], ledger.members, grouped=grouped)
         )
 
 

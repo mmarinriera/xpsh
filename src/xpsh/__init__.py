@@ -16,6 +16,8 @@ from .ledger import Transfer
 VERSION = "0.10.0"
 LOG_FORMAT = "%(asctime)s | [%(name)s] %(levelname)s - %(message)s"
 
+LOG_CONSOLE = Console(stderr=True)
+
 
 def get_version() -> str:
     return VERSION
@@ -27,10 +29,9 @@ def get_resource(file_name: str) -> Path:
 
 
 def _init_logging() -> None:
-    log_console = Console(stderr=True)
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
-    handler = RichHandler(console=log_console, omit_repeated_times=False)
+    handler = RichHandler(console=LOG_CONSOLE, omit_repeated_times=False)
     logger.addHandler(handler)
 
 
