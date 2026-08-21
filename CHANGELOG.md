@@ -2,6 +2,18 @@
 
 <!-- version list -->
 
+## v0.11.0 (2026-08-21)
+
+### Features
+
+- **cli**: Improve exception handling and logging
+  ([#15](https://github.com/mmarinriera/xpsh/pull/15),
+  [`31cd0bd`](https://github.com/mmarinriera/xpsh/commit/31cd0bdacd285b5ef7c1dcaea4affa2b57f0929b))
+
+- **cli**: More robust exception handling. ([#15](https://github.com/mmarinriera/xpsh/pull/15),
+  [`31cd0bd`](https://github.com/mmarinriera/xpsh/commit/31cd0bdacd285b5ef7c1dcaea4affa2b57f0929b))
+
+
 ## v0.10.0 (2026-08-19)
 
 ### Continuous Integration
