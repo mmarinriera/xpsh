@@ -15,7 +15,7 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-  "click>=8.4",
+  "click>=8.5",
   "filelock>=3.29",
   "plotext==5.2.8",
   "rich>=15",

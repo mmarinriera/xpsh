@@ -178,8 +178,8 @@ def xpsh(ctx: click.Context, debug_mode: bool) -> None:
 
 
 @xpsh.command
-@click.argument("file_path", type=str)
-@click.argument("members", nargs=-1, type=str)
+@click.argument("file_path", type=str, help="File path where the ledger data will be saved.")
+@click.argument("members", nargs=-1, type=str, help="Member names that should be included in the ledger.")
 @click.option("-f", "--force", "force", is_flag=True, help="Force overwriting of existing file in FILE_PATH.")
 def create(file_path: str, members: list[str], force: bool) -> None:
     """
@@ -212,7 +212,7 @@ def create(file_path: str, members: list[str], force: bool) -> None:
 
 
 @xpsh.command
-@click.argument("file_path", type=str)
+@click.argument("file_path", type=str, help="Path to the ledger file.")
 @click.option("-g", "--graph", "graph", is_flag=True, help="Show graph of balance history.")
 def balance(file_path: str, graph: bool) -> None:
     """
@@ -238,7 +238,7 @@ def balance(file_path: str, graph: bool) -> None:
 
 
 @xpsh.command
-@click.argument("file_path", type=str)
+@click.argument("file_path", type=str, help="Path to the ledger file.")
 @click.option("-n", "--n-last-entries", "n_last_entries", default=None, type=int, help="Show N most recent expenses.")
 @click.option("-g", "--graph", "graph", is_flag=True, help="Show stacked bar graph of expense history.")
 @click.option(
@@ -277,7 +277,7 @@ def examples() -> None:
 
 
 @xpsh.command
-@click.argument("file_path", type=str)
+@click.argument("file_path", type=str, help="Path to the ledger file.")
 @click.option("-p", "--payer", "payer", type=str, default=None, help="Filter entries by payer.")
 @click.option("-c", "--concept", "concept", type=str, default=None, help="Filter entries by concept.")
 @click.option(
@@ -323,10 +323,10 @@ def search(
 
 
 @xpsh.command
-@click.argument("file_path", type=str)
-@click.argument("payer", type=str)
-@click.argument("quantity", type=float)
-@click.argument("concept", type=str)
+@click.argument("file_path", type=str, help="Path to the ledger file.")
+@click.argument("payer", type=str, help="Who payed for the expense.")
+@click.argument("quantity", type=float, help="Quantity payed.")
+@click.argument("concept", type=str, help="What was the expense for.")
 @click.option(
     "-a",
     "--assignment",
@@ -398,10 +398,10 @@ def add_expense(
 
 
 @xpsh.command
-@click.argument("file_path", type=str)
-@click.argument("recipient", type=str)
-@click.argument("quantity", type=float)
-@click.argument("concept", type=str)
+@click.argument("file_path", type=str, help="Path to the ledger file.")
+@click.argument("recipient", type=str, help="Who received the reimbursement.")
+@click.argument("quantity", type=float, help="Quantity reimbursed.")
+@click.argument("concept", type=str, help="What was the reimbursement for.")
 @click.option(
     "-a",
     "--assignment",
@@ -475,10 +475,10 @@ def add_reimbursement(
 
 
 @xpsh.command
-@click.argument("file_path", type=str)
-@click.argument("payer", type=str)
-@click.argument("quantity", type=float)
-@click.argument("recipient")
+@click.argument("file_path", type=str, help="Path to the ledger file.")
+@click.argument("payer", type=str, help="Who made the transfer.")
+@click.argument("quantity", type=float, help="Quantity transferred.")
+@click.argument("recipient", type=str, help="Who received the transfer.")
 @click.option(
     "-d", "--date", "date_str", type=str, default=None, help="Date in 'dd/mm/yyy' format (current day by default)."
 )
@@ -538,8 +538,8 @@ def add_transfer(
 
 
 @xpsh.command
-@click.argument("file_path", type=str)
-@click.argument("index", type=int)
+@click.argument("file_path", type=str, help="Path to the ledger file.")
+@click.argument("index", type=int, help="Entry index.")
 @click.option("-y", "--yes", "yes", is_flag=True, help="Confirm deletion of entry without input prompt.")
 def delete_entry(file_path: str, index: int, yes: bool) -> None:
     """
@@ -575,8 +575,8 @@ def delete_entry(file_path: str, index: int, yes: bool) -> None:
 
 
 @xpsh.command
-@click.argument("file_path", type=str)
-@click.argument("index", type=int)
+@click.argument("file_path", type=str, help="Path to the ledger file.")
+@click.argument("index", type=int, help="Entry index.")
 @click.option("-p", "--payer", "payer", type=str, default=None, help="Edit the payer.")
 @click.option("-q", "--quantity", "quantity", type=float, default=None, help="Edit the quantity.")
 @click.option(
