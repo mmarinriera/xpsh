@@ -2,6 +2,24 @@
 
 <!-- version list -->
 
+## v0.12.0 (2026-08-28)
+
+### Chores
+
+- Update pre.-commit hooks
+  ([`1f4e7e6`](https://github.com/mmarinriera/xpsh/commit/1f4e7e6d21f4e7d73f8a0ba3bcce05950b37efec))
+
+### Continuous Integration
+
+- Add yamlfmt pre-commit hook
+  ([`3f05cde`](https://github.com/mmarinriera/xpsh/commit/3f05cdec3e9562669839f2d62e3392eb7e35ad91))
+
+### Features
+
+- **cli**: Add help strings to command args
+  ([`e20517d`](https://github.com/mmarinriera/xpsh/commit/e20517db01df1dc1df047301407b138d69c4c12b))
+
+
 ## v0.11.0 (2026-08-21)
 
 ### Features

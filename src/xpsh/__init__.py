@@ -13,7 +13,7 @@ from .ledger import Ledger
 from .ledger import LedgerEntry
 from .ledger import Transfer
 
-VERSION = "0.11.0"
+VERSION = "0.12.0"
 LOG_FORMAT = "%(asctime)s | [%(name)s] %(levelname)s - %(message)s"
 
 LOG_CONSOLE = Console(stderr=True)
