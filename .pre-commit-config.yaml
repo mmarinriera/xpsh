@@ -2,7 +2,7 @@ exclude: ^(resources|tests/resources)/
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.2
+    rev: v0.16.3
     hooks:
       - id: ruff
         name: Run ruff to auto-fix lint errors
@@ -45,7 +45,7 @@ repos:
         stages: [commit-msg]
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.12.3
+    rev: 0.12.4
     hooks:
       - id: uv-lock
         name: Update uv lock file
@@ -57,7 +57,7 @@ repos:
         files: ^src/xpsh/
 
   - repo: https://github.com/tox-dev/pyproject-fmt
-    rev: v2.27.0
+    rev: v2.27.1
     hooks:
       - id: pyproject-fmt
 
