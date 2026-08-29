@@ -9,7 +9,7 @@ on:
       - main
 
 env:
-  UV_VERSION: "0.11"
+  UV_VERSION: "0.12"
   COLUMNS: 120
 
 jobs:
