@@ -28,7 +28,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv tool install "python-semantic-release>=10.2.0"
+          uv tool install "python-semantic-release>=10.6.2"
 
       - name: Bump version and create tag
         id: bump_version
