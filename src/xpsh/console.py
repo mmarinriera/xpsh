@@ -46,10 +46,18 @@ CONSOLE = Console()
 
 plt.terminal.limit(False, False)  # the box decides the plot size, not the terminal
 plt.add_theme(
-    "xpsh",
+    "xpsh-default",
     canvas=None,
     text=plt.pixel(foreground="white", background=None, style="bold"),
     sequence=COLOR_PALETTE,
+    grid=None,
+)
+
+plt.add_theme(
+    "xpsh-balance",
+    canvas=None,
+    text=plt.pixel(foreground="white", background=None, style="bold"),
+    sequence=[15] + COLOR_PALETTE,  # add white as first color
     grid=None,
 )
 
@@ -135,11 +143,16 @@ def _balance_history_plot(ledger: Ledger, title: str) -> plotextPanel:
     fig = plt.figure
     fig.clear()
     fig.plot_size(CONSOLE.width - 2 * PAD[1], (CONSOLE.height - 2 * PAD[0]) // 2)
-    fig.theme("xpsh")
+    fig.theme("xpsh-balance")
     fig.date("x").activate(form=DATE_OUT_FMT)
     fig.title(title)
 
     t: list[str] = [d.strftime(DATE_OUT_FMT) for d in ledger.history["dates"]]
+
+    total = fig.signal(t, ledger.history["total_expenses"], marker="hd")
+    total.label("Total expenses").density("full", scope="line").lines()
+    fig.draw(total)
+
     for m in ledger.members:
         q = ledger.history[f"account_{m}_paid"]
         if not t:
@@ -148,10 +161,6 @@ def _balance_history_plot(ledger: Ledger, title: str) -> plotextPanel:
         member = fig.signal(t, q, marker="hd")
         member.label(f"Paid by {m}").density("full", scope="line").lines()
         fig.draw(member)
-
-    total = fig.signal(t, ledger.history["total_expenses"], marker="hd")
-    total.label("Total expenses").density("full", scope="line").lines()
-    fig.draw(total)
 
     max_total = max(ledger.history["total_expenses"])
     y_ticks = [i * max_total / 4 for i in range(5)]
@@ -212,7 +221,7 @@ def _stacked_bar_plot(dates: list[str], series: dict[str, list[float]], title: s
     fig = plt.figure
     fig.clear()
     fig.plot_size(CONSOLE.width - 2 * PAD[1], len(dates) + 2)
-    fig.theme("xpsh")
+    fig.theme("xpsh-default")
 
     logger.debug(f"dates {dates}")
     for k, s in series.items():
