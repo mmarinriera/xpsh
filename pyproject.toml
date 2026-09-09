@@ -17,7 +17,7 @@ classifiers = [
 dependencies = [
   "click>=8.5",
   "filelock>=3.29",
-  "plotext==5.2.8",
+  "plotext==6.1",
   "rich>=15",
   "streamlit>=1.57",
 ]
@@ -61,6 +61,10 @@ warn_unused_configs = true
 no_implicit_optional = true
 no_implicit_reexport = true
 show_error_codes = true
+
+[tool.ty]
+# Replace module imports with typing.Any
+analysis.replace-imports-with-any = [ "plotext.**" ]
 
 [tool.pytest]
 addopts = [ "-vvv" ]
