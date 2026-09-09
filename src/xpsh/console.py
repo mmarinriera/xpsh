@@ -131,10 +131,10 @@ def _print_entries_table(entries: list[IndexedLedgerEntry], color_map: dict[str,
     return entry_table
 
 
-def _balance_history_plot(width: int, height: int, ledger: Ledger, title: str) -> Any:
+def _balance_history_plot(ledger: Ledger, title: str) -> Any:
     fig = plt.figure
     fig.clear()
-    fig.plot_size(width, height)
+    fig.plot_size(CONSOLE.width - 2 * PAD[1], (CONSOLE.height - 2 * PAD[0]) // 2)
     fig.theme("xpsh")
     fig.date("x").activate(form=DATE_OUT_FMT)
     fig.title(title)
@@ -203,22 +203,17 @@ def print_balance(ledger: Ledger, plot: bool = False) -> None:
     if not plot:
         return
 
-    canvas = _balance_history_plot(
-        CONSOLE.width - 2 * PAD[1],
-        (CONSOLE.height - 2 * PAD[0]) // 2,
-        ledger,
-        title="Ledger balance history",
-    )
+    canvas = _balance_history_plot(ledger, title="Ledger balance history")
 
     _print_to_console(plotextPanel(plot_canvas=canvas))
 
 
-def _stacked_bar_plot(width: int, dates: list[str], series: dict[str, list[float]], title: str) -> Any:
+def _stacked_bar_plot(dates: list[str], series: dict[str, list[float]], title: str) -> Any:
     totals = [sum(v) for v in zip(*series.values())]
 
     fig = plt.figure
     fig.clear()
-    fig.plot_size(width, len(dates) + 2)
+    fig.plot_size(CONSOLE.width - 2 * PAD[1], len(dates) + 2)
     fig.theme("xpsh")
 
     logger.debug(f"dates {dates}")
@@ -265,9 +260,7 @@ def _build_expense_plot(width: int, entries: list[LedgerEntry], members: list[st
         for m, v in aggregate.items():
             series[m].append(v)
 
-    canvas = _stacked_bar_plot(
-        width=width - 2 * PAD[1], dates=dates, series=series, title=f"Expense history grouped by {grouped}"
-    )
+    canvas = _stacked_bar_plot(dates=dates, series=series, title=f"Expense history grouped by {grouped}")
     return plotextPanel(plot_canvas=canvas)
 
 
