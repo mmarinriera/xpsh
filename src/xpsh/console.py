@@ -44,6 +44,15 @@ STYLE_NO_DIFF = ""
 
 CONSOLE = Console()
 
+plt.terminal.limit(False, False)  # the box decides the plot size, not the terminal
+plt.add_theme(
+    "xpsh",
+    canvas=None,
+    text=plt.pixel(foreground="white", background=None, style="bold"),
+    sequence=COLOR_PALETTE,
+    grid=None,
+)
+
 
 def _build_member_color_map(members: list[str], color_palette: list[int]) -> dict[str, str]:
     return {m: f"color({c})" for m, c in zip(members, itertools.cycle(color_palette))}
@@ -72,7 +81,7 @@ class AssignmentDictRenderer:
         return Text(", ").join(text_elements)
 
 
-class plotextMixin(JupyterMixin):
+class plotextPanel(JupyterMixin):
     def __init__(self, plot_canvas: str) -> None:
         self.decoder = AnsiDecoder()
         self.canvas = plot_canvas
@@ -122,27 +131,34 @@ def _print_entries_table(entries: list[IndexedLedgerEntry], color_map: dict[str,
     return entry_table
 
 
-def _balance_history_plot(width: int, height: int, ledger: Ledger, title: str) -> str:
-    t = plt.datetimes_to_string(ledger.history["dates"])
-    exp = ledger.history["total_expenses"]
-    colors = [c for _, c in zip(ledger.members, itertools.cycle(COLOR_PALETTE))]
+def _balance_history_plot(width: int, height: int, ledger: Ledger, title: str) -> Any:
+    fig = plt.figure
+    fig.clear()
+    fig.plot_size(width, height)
+    fig.theme("xpsh")
+    fig.date("x").activate(form=DATE_OUT_FMT)
+    fig.title(title)
 
-    plt.date_form("d/m/Y")
-    plt.clf()
-    plt.plotsize(width=width, height=height)
-    plt.theme("pro")
-    plt.plot(t, exp, label="Total expenses", color="white", marker="fhd")
-    for m, c in zip(ledger.members, colors):
+    t: list[str] = [d.strftime(DATE_OUT_FMT) for d in ledger.history["dates"]]
+    for m in ledger.members:
         q = ledger.history[f"account_{m}_paid"]
         if not t:
             continue
 
-        plt.plot(t, q, label=f"Paid by {m}", color=c, marker="fhd")
+        member = fig.signal(t, q, marker="hd")
+        member.label(f"Paid by {m}").density("full", scope="line").lines()
+        fig.draw(member)
 
-    plt.title(title)
-    out: str = plt.build()
+    total = fig.signal(t, ledger.history["total_expenses"], marker="hd")
+    total.label("Total expenses").density("full", scope="line").lines()
+    fig.draw(total)
 
-    return out
+    max_total = max(ledger.history["total_expenses"])
+    y_ticks = [i * max_total / 4 for i in range(5)]
+    logger.debug(y_ticks)
+    fig.ruler("y").ticks(y_ticks, [f"{v:.2f}" for v in y_ticks])
+
+    return fig.build().string()
 
 
 def print_balance(ledger: Ledger, plot: bool = False) -> None:
@@ -194,22 +210,43 @@ def print_balance(ledger: Ledger, plot: bool = False) -> None:
         title="Ledger balance history",
     )
 
-    _print_to_console(plotextMixin(plot_canvas=canvas))
+    _print_to_console(plotextPanel(plot_canvas=canvas))
 
 
-def _stacked_bar_plot(width: int, dates: list[str], series: dict[str, list[float]], title: str) -> str:
-    colors = [c for _, c in zip(series.keys(), itertools.cycle(COLOR_PALETTE))]
+def _stacked_bar_plot(width: int, dates: list[str], series: dict[str, list[float]], title: str) -> Any:
+    totals = [sum(v) for v in zip(*series.values())]
 
-    plt.clf()
-    labels = list(series.keys())
-    y = list(series.values())
-    plt.simple_stacked_bar(dates, y, labels=labels, colors=colors, width=width, title=title)
-    out: str = plt.build()
+    fig = plt.figure
+    fig.clear()
+    fig.plot_size(width, len(dates) + 2)
+    fig.theme("xpsh")
 
-    return out
+    logger.debug(f"dates {dates}")
+    for k, s in series.items():
+        logger.debug(f"k:{k}, s {s}")
+
+    signal = fig.bar(
+        [d + " " for d in dates],
+        list(series.values()),
+        stacked=True,
+        orientation="horizontal",
+        marker="brick",
+        width=0,
+        lines=True,
+    )
+    fig.draw(signal)
+
+    fig.title(title)
+    fig.axes(False)
+    fig.ruler("x").lim(0, max(totals) * 1.01)
+    fig.ruler("x").ticks(totals, [f"{v:.2f}" for v in totals])
+    fig.ruler("y").alignment(tick="left")
+    fig.ruler("y").direction(-1)
+
+    return fig.build().string()
 
 
-def _build_expense_plot(width: int, entries: list[LedgerEntry], members: list[str], grouped: str) -> plotextMixin:
+def _build_expense_plot(width: int, entries: list[LedgerEntry], members: list[str], grouped: str) -> plotextPanel:
     if grouped == "day":
         key = lambda e: e.date.strftime("%d/%m/%Y")
     elif grouped == "month":
@@ -231,7 +268,7 @@ def _build_expense_plot(width: int, entries: list[LedgerEntry], members: list[st
     canvas = _stacked_bar_plot(
         width=width - 2 * PAD[1], dates=dates, series=series, title=f"Expense history grouped by {grouped}"
     )
-    return plotextMixin(plot_canvas=canvas)
+    return plotextPanel(plot_canvas=canvas)
 
 
 def print_expenses(ledger: Ledger, n_last_entries: int | None, plot: bool, grouped: str) -> None:
