@@ -82,7 +82,7 @@ class AssignmentDictRenderer:
 
 
 class plotextPanel(JupyterMixin):
-    def __init__(self, plot_canvas: str) -> None:
+    def __init__(self, plot_canvas: Any) -> None:
         self.decoder = AnsiDecoder()
         self.canvas = plot_canvas
 
@@ -131,7 +131,7 @@ def _print_entries_table(entries: list[IndexedLedgerEntry], color_map: dict[str,
     return entry_table
 
 
-def _balance_history_plot(ledger: Ledger, title: str) -> Any:
+def _balance_history_plot(ledger: Ledger, title: str) -> plotextPanel:
     fig = plt.figure
     fig.clear()
     fig.plot_size(CONSOLE.width - 2 * PAD[1], (CONSOLE.height - 2 * PAD[0]) // 2)
@@ -158,7 +158,7 @@ def _balance_history_plot(ledger: Ledger, title: str) -> Any:
     logger.debug(y_ticks)
     fig.ruler("y").ticks(y_ticks, [f"{v:.2f}" for v in y_ticks])
 
-    return fig.build().string()
+    return plotextPanel(fig.build().string())
 
 
 def print_balance(ledger: Ledger, plot: bool = False) -> None:
@@ -203,12 +203,10 @@ def print_balance(ledger: Ledger, plot: bool = False) -> None:
     if not plot:
         return
 
-    canvas = _balance_history_plot(ledger, title="Ledger balance history")
-
-    _print_to_console(plotextPanel(plot_canvas=canvas))
+    _print_to_console(_balance_history_plot(ledger, title="Ledger balance history"))
 
 
-def _stacked_bar_plot(dates: list[str], series: dict[str, list[float]], title: str) -> Any:
+def _stacked_bar_plot(dates: list[str], series: dict[str, list[float]], title: str) -> plotextPanel:
     totals = [sum(v) for v in zip(*series.values())]
 
     fig = plt.figure
@@ -238,10 +236,10 @@ def _stacked_bar_plot(dates: list[str], series: dict[str, list[float]], title: s
     fig.ruler("y").alignment(tick="left")
     fig.ruler("y").direction(-1)
 
-    return fig.build().string()
+    return plotextPanel(fig.build().string())
 
 
-def _build_expense_plot(width: int, entries: list[LedgerEntry], members: list[str], grouped: str) -> plotextPanel:
+def _build_expense_plot(entries: list[LedgerEntry], members: list[str], grouped: str) -> plotextPanel:
     if grouped == "day":
         key = lambda e: e.date.strftime("%d/%m/%Y")
     elif grouped == "month":
@@ -260,8 +258,7 @@ def _build_expense_plot(width: int, entries: list[LedgerEntry], members: list[st
         for m, v in aggregate.items():
             series[m].append(v)
 
-    canvas = _stacked_bar_plot(dates=dates, series=series, title=f"Expense history grouped by {grouped}")
-    return plotextPanel(plot_canvas=canvas)
+    return _stacked_bar_plot(dates=dates, series=series, title=f"Expense history grouped by {grouped}")
 
 
 def print_expenses(ledger: Ledger, n_last_entries: int | None, plot: bool, grouped: str) -> None:
@@ -275,9 +272,7 @@ def print_expenses(ledger: Ledger, n_last_entries: int | None, plot: bool, group
 
     _print_to_console(_print_entries_table(idx_entries, name_color_map))
     if plot:
-        _print_to_console(
-            _build_expense_plot(CONSOLE.width, [e for _, e in idx_entries], ledger.members, grouped=grouped)
-        )
+        _print_to_console(_build_expense_plot([e for _, e in idx_entries], ledger.members, grouped=grouped))
 
 
 def print_search_entries(ledger: Ledger, entries: list[IndexedLedgerEntry]) -> None:
