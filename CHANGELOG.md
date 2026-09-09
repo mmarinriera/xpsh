@@ -2,6 +2,30 @@
 
 <!-- version list -->
 
+## v0.12.1 (2026-09-09)
+
+### Bug Fixes
+
+- **cli**: Update plotext to >= 6.0 ([#16](https://github.com/mmarinriera/xpsh/pull/16),
+  [`5164ee7`](https://github.com/mmarinriera/xpsh/commit/5164ee7491b6dcb4e73ebfcede7505d8b6a33fbe))
+
+### Chores
+
+- Set min uv version to 0.12
+  ([`75bcb5a`](https://github.com/mmarinriera/xpsh/commit/75bcb5a83e72e924126d08bd8309f42e2684d9d4))
+
+- Set min version in semantic version workflow
+  ([`92af145`](https://github.com/mmarinriera/xpsh/commit/92af145635948a9774bfff6739b98d1756319e38))
+
+- Update pre-commit hooks
+  ([`c21bb16`](https://github.com/mmarinriera/xpsh/commit/c21bb162fd5047526e84d6bb7f75762fe4c10226))
+
+### Continuous Integration
+
+- Pin python-semantic-release version due to bug
+  ([`ffb0587`](https://github.com/mmarinriera/xpsh/commit/ffb0587daa772795bc690576eb85230bd0b9ba7d))
+
+
 ## v0.12.0 (2026-08-28)
 
 ### Chores
